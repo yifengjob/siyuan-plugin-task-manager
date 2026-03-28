@@ -36,6 +36,15 @@ export class PluginConfigManager {
         });
     }
 
+    async removeConfigData(): Promise<void> {
+        try {
+            await this.plugin.removeData('config.json');
+            console.log(`[${this.plugin.name}] 配置文件已删除`);
+        } catch (error) {
+            console.error(`[${this.plugin.name}] 删除配置文件失败:`, error);
+            throw error;
+        }
+    }
     getConfig(): PluginConfig {
         return this.config;
     }
