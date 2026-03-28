@@ -193,6 +193,17 @@ export default class TaskManagerPlugin extends Plugin {
         }
     }
 
+    async uninstall(): Promise<void> {
+        try {
+            this.cleanup();
+            await this.configManager.removeConfigData();
+            console.log(`[${this.name}] 卸载完成`);
+        } catch (error) {
+            console.error(`[${this.name}] 卸载失败:`, error);
+            throw error;
+        }
+    }
+
     onunload(): void {
         this.cleanup();
     }
