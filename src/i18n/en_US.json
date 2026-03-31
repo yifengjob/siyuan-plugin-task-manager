@@ -14,6 +14,9 @@
     "inProgress": "In Progress",
     "save": "Save",
     "cancel": "Cancel",
+    "btnOk": "OK",
+    "btnCancel": "Cancel",
+    "btnNow": "Now",
     "sidebarTitle": "Task Manager",
     "noTasks": "No tasks",
     "untitled": "Untitled",
@@ -23,8 +26,14 @@
     "all": "All",
     "refresh": "Refresh",
     "totalTasks": "Task count",
-    "defaultProgressGroupTitle": "Default progress group",
+    "defaultProgressGroupTitle": "Default progress grouping",
     "defaultProgressGroupDesc": "The default progress grouping includes: in progress, completed, and all three grouping methods.",
     "autoHidePopoverDelayTitle": "Auto hide popover delay",
-    "autoHidePopoverDelayDesc": "The delay in seconds before the popover is hidden. Set to 0 to disable auto hiding."
+    "autoHidePopoverDelayDesc": "The delay in seconds before the popover is hidden. Set to 0 to disable auto hiding.",
+    "filterSettingsTitle": "Task Filter",
+    "filterSettingsDesc": "Check the notebooks or blocks you want to filter. Tasks in checked items will not appear in the task list.",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "notebookCount": "notebooks",
+    "docCount": "blocks"
 }

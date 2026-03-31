@@ -95,7 +95,29 @@ export interface Block {
     created: string;
     updated: string;
 }
-
+export interface File {
+    path: string;
+    name: string;
+    icon: string;
+    name1: string;
+    alias: string;
+    memo: string;
+    bookmark: string;
+    id: string;
+    count: number;
+    size: number;
+    hSize: string;
+    mtime: number;
+    ctime: number;
+    hMtime: string;
+    hCtime: string;
+    sort: number;
+    subFileCount: number;
+    hidden: boolean;
+    newFlashcardCount: number;
+    dueFlashcardCount: number;
+    flashcardCount: number;
+}
 export interface BlockInfo {
     box: string;
     path: string;
@@ -133,6 +155,7 @@ export interface Window {
 export interface Task {
     id: string;
     box: string;
+    boxTitle: string;
     hpath: string;
     rootId: string;
     rootTitle: string;
@@ -154,7 +177,9 @@ export interface TaskAttrs {
 
 export interface PluginConfig {
     defaultProgressGroup: 'all' | 'completed' | 'incomplete' | string;
-    addAutoHidePopoverDelay: number;
+    autoHidePopoverDelay: number;
+    filteredNotebooks: string[];
+    filteredBlocks: string[];
 }
 
 export interface PluginInfo {
@@ -195,3 +220,10 @@ export enum SyFrontendTypes {
     // 浏览器 - 移动端
     'browser-mobile' = 'browser-mobile',
 }
+
+interface AppComponentMethods {
+    showPopover: (options: PopoverOptions) => void;
+    hidePopover: () => void;
+}
+
+type AppComponent = ComponentPublicInstance & AppComponentMethods;

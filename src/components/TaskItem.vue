@@ -25,19 +25,70 @@ const statusText = computed(() => {
     return props.task.attrs.completed ? i18n.completed : i18n.inProgress;
 });
 
-const formatDate = (value: string | null) => {
+// 预编译正则表达式（提升性能）
+const DATE_TIME_14_DIGITS = /^\d{14}$/;
+const DATE_TIME_12_DIGITS = /^\d{12}$/; // 新增：12 位数字格式 (yyyyMMddHHmm)
+const STANDARD_DATE_TIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+const STANDARD_DATE_TIME_NO_SECONDS = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/; // 新增：不含秒的标准格式
+const STANDARD_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/; // 新增：仅日期格式
+
+/**
+ * 格式化日期时间
+ * 统一返回格式：yyyy-MM-dd HH:mm:ss
+ */
+const formatDate = (value: string | null): string => {
     if (!value) return '—';
-    // eslint-disable-next-line e18e/prefer-static-regex
-    if (/^\d{14}$/.test(value)) {
+
+    // 情况 1: 14 位数字格式 (yyyyMMddHHmmss)
+    if (DATE_TIME_14_DIGITS.test(value)) {
         const year = value.substring(0, 4);
         const month = value.substring(4, 6);
         const day = value.substring(6, 8);
-        return `${year}-${month}-${day}`;
+        const hour = value.substring(8, 10);
+        const minute = value.substring(10, 12);
+        const second = value.substring(12, 14);
+        return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
-    // eslint-disable-next-line e18e/prefer-static-regex
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+    // 情况 2: 12 位数字格式 (yyyyMMddHHmm) - 不含秒
+    if (DATE_TIME_12_DIGITS.test(value)) {
+        const year = value.substring(0, 4);
+        const month = value.substring(4, 6);
+        const day = value.substring(6, 8);
+        const hour = value.substring(8, 10);
+        const minute = value.substring(10, 12);
+        return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
+
+    // 情况 3: 已是标准格式 (yyyy-MM-dd HH:mm:ss)
+    if (STANDARD_DATE_TIME.test(value)) {
+        return `${value}`;
+    }
+
+    // 情况 4: 标准格式不含秒 (yyyy-MM-dd HH:mm)
+    if (STANDARD_DATE_TIME_NO_SECONDS.test(value)) {
+        return `${value}`;
+    }
+
+    // 情况 5: 仅日期格式 (yyyy-MM-dd)
+    if (STANDARD_DATE_ONLY.test(value)) {
+        return `${value}`;
+    }
+
+    // 情况 6: 其他可解析的日期格式
     const date = new Date(value);
-    if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+    if (!Number.isNaN(date.getTime())) {
+        // 统一格式化为 yyyy-MM-dd HH:mm:ss
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // 情况 7: 无效日期
     return '—';
 };
 

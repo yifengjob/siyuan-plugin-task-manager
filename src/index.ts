@@ -1,10 +1,10 @@
-import type { ComponentPublicInstance } from 'vue';
-import type { PluginConfig, PopoverOptions } from '@/types';
+import type { AppComponent, PluginConfig, PopoverOptions } from '@/types';
 import { createPinia } from 'pinia';
-import { IProtyle, Plugin } from 'siyuan';
+import { IObject, IProtyle, Plugin } from 'siyuan';
 import { createApp } from 'vue';
 import PluginInfoString from '@/../plugin.json';
 import App from '@/App.vue';
+import type { App as SiyuanApp } from 'siyuan';
 import { taskService } from '@/services/TaskService.ts';
 
 import {
@@ -39,14 +39,14 @@ export default class TaskManagerPlugin extends Plugin {
     private readonly configManager: PluginConfigManager;
     private vueApp: ReturnType<typeof createApp> | null = null;
     private mountPoint: HTMLElement | null = null;
-    private appComponent: ComponentPublicInstance | null = null;
+    private appComponent: AppComponent | null = null;
 
     public readonly version: string;
     public readonly author: string;
     public readonly frontendInfo: ReturnType<typeof FrontendDetector.detect>;
 
-    constructor(context: any) {
-        super(context);
+    constructor(options: { app: SiyuanApp; name: string; i18n: IObject }) {
+        super(options);
         this.configManager = new PluginConfigManager(this);
         this.version = PLUGIN_INFO.version;
         this.author = PLUGIN_INFO.author;
@@ -189,7 +189,7 @@ export default class TaskManagerPlugin extends Plugin {
         };
 
         if (this.appComponent && 'showPopover' in this.appComponent) {
-            (this.appComponent as any).showPopover(options);
+            this.appComponent.showPopover(options);
         }
     }
 

@@ -12,6 +12,8 @@ import iconTaskPriorityNormal from '@/assets/icons/task-priority-normal.svg?raw'
 import iconTaskStart from '@/assets/icons/task-start.svg?raw';
 import iconTaskStatusDue from '@/assets/icons/task-status-due.svg?raw';
 import iconTaskStatusUnDue from '@/assets/icons/task-status-un-due.svg?raw';
+import iconNotebook from '@/assets/icons/notebook.svg?raw';
+import iconDocument from '@/assets/icons/document.svg?raw';
 
 interface IconDefinition {
     content: string;
@@ -32,6 +34,8 @@ const ICONS: IconDefinition[] = [
     { content: iconTaskPriorityMedium, symbolId: 'iconTaskPriorityMedium' },
     { content: iconTaskPriorityNormal, symbolId: 'iconTaskPriorityNormal' },
     { content: iconTaskPriorityLow, symbolId: 'iconTaskPriorityLow' },
+    { content: iconNotebook, symbolId: 'iconNotebook' },
+    { content: iconDocument, symbolId: 'iconDocument' },
 ];
 export class IconRegistry {
     constructor(private plugin: TaskManagerPlugin) {}

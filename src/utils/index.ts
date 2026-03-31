@@ -6,3 +6,7 @@ export function getDomByVueComponent(component) {
     app.mount(div);
     return div;
 }
+
+export function escapeSql(value: string): string {
+    return value.replace(/'/g, "''");
+}

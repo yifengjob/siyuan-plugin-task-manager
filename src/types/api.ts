@@ -5,6 +5,8 @@ import {
     doOperation,
     Notebook,
     NotebookConf,
+    File,
+    NotebookId,
 } from '@/types/index';
 
 export enum DataType {
@@ -77,4 +79,9 @@ export interface IResForwardProxy {
 
 export interface IResExportResources {
     path: string;
+}
+
+export interface IResListDocs {
+    box: NotebookId;
+    files: File[];
 }

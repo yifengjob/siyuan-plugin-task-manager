@@ -21,6 +21,7 @@ import {
     IResGetChildBlock,
     IResGetNotebookConf,
     IResGetTemplates,
+    IResListDocs,
     IReslsNotebooks,
     IResReadDir,
     IResUpload,
@@ -168,6 +169,18 @@ export class ApiService {
             path,
         };
         const url = '/api/filetree/getIDsByHPath';
+        return this.request(url, data);
+    }
+
+    async listDocsByPath(
+        notebook: NotebookId,
+        path: string
+    ): Promise<IResListDocs> {
+        const data = {
+            notebook,
+            path,
+        };
+        const url = '/api/filetree/listDocsByPath';
         return this.request(url, data);
     }
 

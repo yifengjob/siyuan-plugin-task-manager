@@ -6,6 +6,14 @@ import { useTaskStore } from '@/stores/tasks.store.ts';
 import { usePlugin } from '@/utils/pluginInstance.ts';
 import TaskItem from './TaskItem.vue';
 import type { IWebSocketData } from 'siyuan';
+import {
+    computePosition,
+    autoUpdate,
+    offset,
+    shift,
+    flip,
+    arrow as arrowMiddleware,
+} from '@floating-ui/dom';
 
 const taskStore = useTaskStore();
 const plugin = usePlugin();
@@ -13,22 +21,18 @@ const i18n = plugin.i18n;
 const isLoading = ref(true);
 const loadError = ref<string | null>(null);
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-// 节流控制：记录已处理的 blockId 和时间戳
 const processedBlockIds = new Map<string, number>();
 const THROTTLE_DELAY = 50;
 const DEBOUNCED_DELAY = 50;
 const MAX_CACHED_BLOCK_IDS = 1000;
-const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 分钟过期
+const CACHE_EXPIRY_TIME = 5 * 60 * 1000;
 
-// 过滤状态：'all', 'completed', 'incomplete'
 const filterStatus = ref<'all' | 'completed' | 'incomplete' | string>(
     plugin.getConfig().defaultProgressGroup
 );
 
-// 获取所有任务（原始数据）
 const allTasks = computed(() => taskStore.tasks);
 
-// 根据过滤状态筛选任务
 const filteredTasks = computed(() => {
     if (filterStatus.value === 'all') return allTasks.value;
     if (filterStatus.value === 'completed') {
@@ -37,7 +41,6 @@ const filteredTasks = computed(() => {
     return allTasks.value.filter((task) => task.attrs.completed !== true);
 });
 
-// 定期清理过期缓存
 const cleanupExpiredCache = () => {
     const now = Date.now();
     for (const [blockId, timestamp] of processedBlockIds.entries()) {
@@ -47,16 +50,13 @@ const cleanupExpiredCache = () => {
     }
 };
 
-// 重新计算分组（基于过滤后的任务）
 const groups = computed(() => {
     const map = new Map<
         string,
-        { rootTitle: string; rootPath: string; tasks: Task[] }
+        { rootTitle: string; rootPath: string; boxTitle: string; tasks: Task[] }
     >();
     filteredTasks.value.forEach((task) => {
-        // 使用 rootId 作为分组 key，确保不同文档即使标题相同也不会混淆
         const rootId = task.rootId;
-
         if (!map.has(rootId)) {
             map.set(rootId, {
                 rootTitle:
@@ -64,19 +64,19 @@ const groups = computed(() => {
                         ? task.rootTitle
                         : plugin.i18n.untitled,
                 rootPath: task.hpath,
+                boxTitle:
+                    task.boxTitle !== '' ? task.boxTitle : plugin.i18n.untitled,
                 tasks: [],
             });
         }
         map.get(rootId)!.tasks.push(task);
     });
-
     return Array.from(map.entries()).map(([rootId, data]) => ({
         rootId,
         ...data,
     }));
 });
 
-// 统计数据
 const totalTasks = computed(() => allTasks.value.length);
 const completedTasks = computed(
     () => allTasks.value.filter((t) => t.attrs.completed === true).length
@@ -102,7 +102,6 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     }
 };
 
-// 手动刷新任务
 const handleRefresh = async () => {
     try {
         isLoading.value = true;
@@ -116,7 +115,6 @@ const handleRefresh = async () => {
     }
 };
 
-// 防抖刷新函数（用于 ws-main 事件）
 const debouncedRefresh = async () => {
     if (refreshTimer) {
         clearTimeout(refreshTimer);
@@ -197,7 +195,6 @@ const handleWsMain = async (event: CustomEvent<IWebSocketData>) => {
                         const firstKey = processedBlockIds.keys().next().value;
                         if (firstKey) processedBlockIds.delete(firstKey);
                     }
-                    // 每 100 次操作清理一次过期缓存
                     if (processedBlockIds.size % 100 === 0) {
                         cleanupExpiredCache();
                     }
@@ -218,6 +215,84 @@ const handleWsMain = async (event: CustomEvent<IWebSocketData>) => {
     } catch (error) {
         console.error('[TaskManager] handleWsMain 错误：', error);
     }
+};
+
+// ============ Tooltip 功能 ==========
+let tooltipElement: HTMLDivElement | null = null;
+let cleanupAutoUpdate: (() => void) | null = null;
+
+const createTooltip = (reference: HTMLElement, content: string) => {
+    destroyTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'task-sidebar-tooltip';
+    tooltip.textContent = content;
+    document.body.appendChild(tooltip);
+
+    const arrow = document.createElement('div');
+    arrow.className = 'task-sidebar-tooltip-arrow';
+    tooltip.appendChild(arrow);
+
+    tooltipElement = tooltip;
+
+    cleanupAutoUpdate = autoUpdate(
+        reference,
+        tooltip,
+        () => {
+            computePosition(reference, tooltip, {
+                placement: 'left-start',
+                middleware: [
+                    offset(8),
+                    flip(),
+                    shift({ padding: 8 }),
+                    arrowMiddleware({ element: arrow, padding: 4 }),
+                ],
+            }).then(({ x, y, placement, middlewareData }) => {
+                Object.assign(tooltip.style, {
+                    left: `${x}px`,
+                    top: `${y}px`,
+                });
+
+                if (middlewareData.arrow) {
+                    const { x: arrowX, y: arrowY } = middlewareData.arrow;
+                    const staticSide = {
+                        top: 'bottom',
+                        right: 'left',
+                        bottom: 'top',
+                        left: 'right',
+                    }[placement.split('-')[0]];
+                    Object.assign(arrow.style, {
+                        left: arrowX != null ? `${arrowX}px` : '',
+                        top: arrowY != null ? `${arrowY}px` : '',
+                        right: '',
+                        bottom: '',
+                        [staticSide!]: '-4px',
+                    });
+                }
+            });
+        },
+        { animationFrame: true }
+    );
+};
+
+const destroyTooltip = () => {
+    if (cleanupAutoUpdate) {
+        cleanupAutoUpdate();
+        cleanupAutoUpdate = null;
+    }
+    if (tooltipElement) {
+        tooltipElement.remove();
+        tooltipElement = null;
+    }
+};
+
+const onTitleMouseEnter = (event: MouseEvent, path: string) => {
+    const target = event.currentTarget as HTMLElement;
+    createTooltip(target, path);
+};
+
+const onTitleMouseLeave = () => {
+    destroyTooltip();
 };
 
 onMounted(async () => {
@@ -241,6 +316,7 @@ onUnmounted(() => {
         refreshTimer = null;
     }
     processedBlockIds.clear();
+    destroyTooltip();
 });
 </script>
 
@@ -299,7 +375,16 @@ onUnmounted(() => {
                     :key="group.rootId"
                     class="task-doc-group"
                 >
-                    <div class="task-doc-title" :title="group.rootPath">
+                    <div
+                        class="task-doc-title"
+                        @mouseenter="
+                            onTitleMouseEnter(
+                                $event,
+                                '/' + group.boxTitle + group.rootPath
+                            )
+                        "
+                        @mouseleave="onTitleMouseLeave"
+                    >
                         {{ group.rootTitle }}
                     </div>
                     <TaskItem
@@ -448,6 +533,8 @@ onUnmounted(() => {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        cursor: pointer;
+        transition: background 0.2s;
     }
 
     // 底部状态栏
@@ -475,5 +562,36 @@ onUnmounted(() => {
             }
         }
     }
+}
+</style>
+<style lang="scss">
+// 全局 Tooltip 样式（不在 scoped 内，以便在 body 中生效）
+.task-sidebar-tooltip {
+    position: absolute;
+    background: var(--b3-theme-background);
+    color: var(--b3-theme-on-background);
+    border: transparent;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: var(--b3-font-family), serif;
+    box-shadow: var(--b3-dialog-shadow);
+    white-space: normal;
+    word-break: break-all;
+    max-width: 400px;
+    z-index: 10000;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.task-sidebar-tooltip-arrow {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: inherit;
+    border: inherit;
+    transform: rotate(45deg);
+    pointer-events: none;
+    z-index: -1;
 }
 </style>

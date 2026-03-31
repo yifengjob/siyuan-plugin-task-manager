@@ -2,12 +2,37 @@ import { apiService, ApiService } from '@/services/ApiService.ts';
 import { BlockId, BlockInfo, Task, TaskAttrs } from '@/types';
 import { DataType } from '@/types/api.ts';
 import { TaskAttribute } from '@/types/task.ts';
+import { usePlugin } from '@/utils/pluginInstance.ts';
+import { escapeSql } from '@/utils';
 
 export class TaskService {
     constructor(private api: ApiService) {}
 
     async getAllTasks(): Promise<Task[]> {
         await apiService.flushTransaction();
+
+        const plugin = usePlugin();
+        const filteredNotebooks = plugin.getConfig().filteredNotebooks || [];
+        const filteredBlocks = plugin.getConfig().filteredBlocks || [];
+        // 构建过滤条件
+        let whereClause = `WHERE b.type = 'i' AND b.subtype = 't'`;
+
+        // 添加笔记本过滤条件
+        if (filteredNotebooks && filteredNotebooks.length > 0) {
+            const notebookPlaceholders = filteredNotebooks
+                .map((box) => `'${escapeSql(box)}'`)
+                .join(',');
+            whereClause += ` AND b.box NOT IN (${notebookPlaceholders})`;
+        }
+
+        // 添加块过滤条件
+        if (filteredBlocks && filteredBlocks.length > 0) {
+            const blockPlaceholders = filteredBlocks
+                .map((blockId) => `'${escapeSql(blockId)}'`)
+                .join(',');
+            whereClause += ` AND b.id NOT IN (${blockPlaceholders})`;
+        }
+
         const sql = `SELECT b.id,
                             b.box,
                             b.hpath,
@@ -20,17 +45,18 @@ export class TaskService {
                             d.fcontent as root_title
                      FROM blocks b
                               INNER JOIN blocks d ON b.root_id = d.id
-                     WHERE b.type = 'i'
-                       AND b.subtype = 't'
+                     ${whereClause}
                      ORDER BY b.created ASC`;
 
-        const rows = await this.api.sql(sql);
+        const rows: { [key: string]: string }[] = await this.api.sql(sql);
+        const books = await this.api.lsNotebooks();
 
         if (!rows || rows.length === 0) return [];
 
-        return rows.map((row: any) => ({
+        return rows.map((row: { [key: string]: string }) => ({
             id: row.id,
             box: row.box,
+            boxTitle: books.notebooks.find((n) => n.id === row.box)?.name || '',
             hpath: row.hpath,
             rootId: row.root_id,
             rootTitle: row.root_title || '',
@@ -59,7 +85,7 @@ export class TaskService {
 
         // 解析 ial 字段格式：{: key="value" key2="value2"}
         const regex = /custom-siyuan-plugin-task-manager-task-(\w+)="([^"]*)"/g;
-        let match;
+        let match: RegExpExecArray | null;
 
         while ((match = regex.exec(ial)) !== null) {
             const [, key, value] = match;
@@ -187,7 +213,10 @@ export class TaskService {
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            attrs.actualDue = `${year}-${month}-${day}`;
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            attrs.actualDue = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         } else {
             attrs.actualDue = '';
         }

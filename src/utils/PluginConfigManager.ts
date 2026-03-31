@@ -6,7 +6,9 @@ export class PluginConfigManager {
     private plugin: Plugin;
     private config: PluginConfig = {
         defaultProgressGroup: 'incomplete',
-        addAutoHidePopoverDelay: 3,
+        autoHidePopoverDelay: 3,
+        filteredNotebooks: [],
+        filteredBlocks: [],
     };
 
     private unSavedConfig: PluginConfig | null = null;
