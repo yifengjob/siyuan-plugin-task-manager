@@ -240,7 +240,7 @@ const createTooltip = (reference: HTMLElement, content: string) => {
         tooltip,
         () => {
             computePosition(reference, tooltip, {
-                placement: 'left-start',
+                placement: 'left',
                 middleware: [
                     offset(8),
                     flip(),
@@ -358,16 +358,47 @@ onUnmounted(() => {
         <!-- 内容区域 -->
         <div class="task-sidebar-content">
             <div v-if="isLoading" class="task-sidebar-loading">
-                {{ i18n.loading ?? '加载中...' }}
+                <div class="loading-spinner"></div>
+                <span>{{ i18n.loading ?? '加载中...' }}</span>
             </div>
             <div v-else-if="loadError" class="task-sidebar-error">
-                {{ loadError }}
+                <svg
+                    class="error-icon"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                >
+                    <path
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                </svg>
+                <span>{{ loadError }}</span>
             </div>
             <div
                 v-else-if="filteredTasks.length === 0"
                 class="task-sidebar-empty"
             >
-                {{ i18n.noTasks ?? '暂无任务' }}
+                <svg
+                    class="empty-icon"
+                    width="48"
+                    height="48"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                >
+                    <path
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                </svg>
+                <span>{{ i18n.noTasks ?? '暂无任务' }}</span>
             </div>
             <div v-else>
                 <div
@@ -385,7 +416,12 @@ onUnmounted(() => {
                         "
                         @mouseleave="onTitleMouseLeave"
                     >
-                        {{ group.rootTitle }}
+                        <span class="task-doc-title-text">{{
+                            group.rootTitle
+                        }}</span>
+                        <span class="task-doc-count">{{
+                            group.tasks.length
+                        }}</span>
                     </div>
                     <TaskItem
                         v-for="task in group.tasks"
@@ -400,15 +436,18 @@ onUnmounted(() => {
 
         <!-- 底部状态栏 -->
         <div class="task-sidebar-footer">
-            <span class="task-stat"
-                >{{ i18n.inProgress ?? '进行中' }}：{{ incompleteTasks }}</span
-            >
-            <span class="task-stat"
-                >{{ i18n.completed ?? '已完成' }}：{{ completedTasks }}</span
-            >
-            <span class="task-stat"
-                >{{ i18n.totalTasks ?? '总任务' }}：{{ totalTasks }}</span
-            >
+            <span class="task-stat task-stat--primary">
+                <span class="stat-dot"></span>
+                {{ i18n.inProgress ?? '进行中' }}：{{ incompleteTasks }}
+            </span>
+            <span class="task-stat task-stat--success">
+                <span class="stat-dot"></span>
+                {{ i18n.completed ?? '已完成' }}：{{ completedTasks }}
+            </span>
+            <span class="task-stat task-stat--info">
+                <span class="stat-dot"></span>
+                {{ i18n.totalTasks ?? '总任务' }}：{{ totalTasks }}
+            </span>
         </div>
     </div>
 </template>
@@ -429,71 +468,119 @@ onUnmounted(() => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 12px;
+        padding: 10px 14px;
         background: var(--b3-toolbar-background);
         color: var(--b3-toolbar-color);
         border-bottom: 1px solid var(--b3-border-color);
         gap: 12px;
+        backdrop-filter: blur(8px);
     }
 
     .task-filter-group {
-        display: flex;
-        gap: 2px;
-        background: var(--b3-theme-background);
-        border-radius: 30px;
-        padding: 2px 4px;
+        display: inline-flex;
+        gap: 3px;
+        background: var(--b3-theme-surface);
+        border-radius: 20px;
+        padding: 4px;
         border: 1px solid var(--b3-border-color);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 
     .task-filter-radio {
+        position: relative;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 30px;
+        padding: 6px 14px;
+        border-radius: 16px;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         font-size: 13px;
         color: var(--b3-theme-on-surface);
+        user-select: none;
 
         &:hover {
-            background: var(--b3-theme-surface);
+            background: rgba(128, 128, 128, 0.08);
         }
 
-        input {
+        &.is-selected {
+            background: linear-gradient(
+                135deg,
+                var(--b3-theme-primary) 0%,
+                var(--b3-theme-primary-light) 100%
+            );
+            color: var(--b3-theme-on-primary);
+            box-shadow: 0 2px 6px rgba(var(--b3-theme-primary-rgb), 0.3);
+            font-weight: 600;
+
+            input[type='radio'] {
+                accent-color: var(--b3-theme-on-primary);
+            }
+        }
+
+        &:has(input[type='radio']:checked) {
+            background: var(--b3-theme-primary);
+            color: var(--b3-theme-on-primary);
+            box-shadow: var(--b3-point-shadow);
+
+            input[type='radio'] {
+                accent-color: var(--b3-theme-on-primary);
+                background-color: var(--b3-theme-on-primary);
+            }
+        }
+
+        input[type='radio'] {
             margin: 0;
             width: 14px;
             height: 14px;
-            accent-color: var(--b3-theme-primary);
             cursor: pointer;
+            transition: transform 0.15s ease;
+            flex-shrink: 0;
+
+            &:active {
+                transform: scale(0.9);
+            }
         }
 
         span {
             line-height: 1.2;
+            margin-left: 5px;
+            font-weight: 500;
+            pointer-events: none;
         }
     }
 
     .task-refresh-btn {
-        padding: 4px 8px;
+        padding: 6px;
         min-width: auto;
         background: transparent;
-        border: none;
+        border: 1px solid transparent;
         cursor: pointer;
-        border-radius: 30px;
+        border-radius: 8px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         color: var(--b3-theme-on-surface);
+        transition: all 0.2s ease;
 
         .icon {
             width: 18px;
             height: 18px;
             fill: currentColor;
+            transition: transform 0.3s ease;
         }
 
         &:hover {
             background: var(--b3-theme-surface);
             color: var(--b3-theme-primary);
+            border-color: var(--b3-border-color);
+
+            .icon {
+                transform: rotate(90deg);
+            }
+        }
+
+        &:active {
+            transform: scale(0.95);
         }
     }
 
@@ -501,16 +588,65 @@ onUnmounted(() => {
     .task-sidebar-content {
         flex: 1;
         overflow-y: auto;
-        padding: 12px 8px;
+        overflow-x: hidden;
+        padding: 10px;
+        scroll-behavior: smooth;
+
+        // 自定义滚动条
+        &::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: linear-gradient(
+                180deg,
+                var(--b3-border-color) 0%,
+                var(--b3-theme-on-surface) 100%
+            );
+            border-radius: 3px;
+
+            &:hover {
+                background: var(--b3-theme-primary);
+            }
+        }
     }
 
     .task-sidebar-loading,
     .task-sidebar-error,
     .task-sidebar-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
         text-align: center;
-        padding: 32px;
+        padding: 48px 24px;
         color: var(--b3-theme-on-surface);
         font-size: 14px;
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--b3-border-color);
+            border-top-color: var(--b3-theme-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .error-icon {
+            color: var(--b3-theme-danger);
+            opacity: 0.8;
+        }
+
+        .empty-icon {
+            color: var(--b3-theme-on-surface);
+            opacity: 0.5;
+            margin-bottom: 8px;
+        }
     }
 
     .task-sidebar-error {
@@ -518,49 +654,190 @@ onUnmounted(() => {
     }
 
     .task-doc-group {
-        margin-bottom: 24px;
+        margin-bottom: 18px;
+        animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .task-doc-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
         font-weight: 600;
         font-size: 14px;
-        padding: 6px 10px;
-        background: var(--b3-theme-surface);
-        border-radius: 8px;
-        margin-bottom: 8px;
+        padding: 9px 13px;
+        background: linear-gradient(
+            135deg,
+            rgba(var(--b3-theme-primary-rgb), 0.08) 0%,
+            rgba(128, 128, 128, 0.04) 100%
+        );
+        border-radius: 10px;
+        margin-bottom: 10px;
         color: var(--b3-theme-on-surface);
-        border-left: 3px solid var(--b3-theme-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        border-left: 4px solid var(--b3-theme-primary);
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--b3-point-shadow);
+
+        &:hover {
+            background: linear-gradient(
+                135deg,
+                rgba(var(--b3-theme-primary-rgb), 0.12) 0%,
+                rgba(128, 128, 128, 0.08) 100%
+            );
+            transform: translateX(3px);
+            box-shadow: var(--b3-point-shadow);
+            border-left-width: 5px;
+        }
+
+        .task-doc-title-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-doc-count {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 7px;
+            background: linear-gradient(
+                135deg,
+                var(--b3-theme-primary) 0%,
+                var(--b3-theme-primary-light) 100%
+            );
+            color: var(--b3-theme-on-primary);
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px var(--b3-theme-primary-light);
+            transition: transform 0.2s ease;
+        }
+
+        &:hover .task-doc-count {
+            transform: scale(1.05);
+        }
     }
 
     // 底部状态栏
     .task-sidebar-footer {
         flex-shrink: 0;
         display: flex;
-        justify-content: space-between;
+        justify-content: space-around;
         align-items: center;
-        padding: 8px 12px;
-        background: var(--b3-toolbar-background);
+        padding: 12px 14px;
+        background: linear-gradient(
+            180deg,
+            var(--b3-toolbar-background) 0%,
+            var(--b3-toolbar-background-light) 100%
+        );
         color: var(--b3-toolbar-color);
         border-top: 1px solid var(--b3-border-color);
         font-size: 12px;
-        gap: 6px;
+        gap: 8px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 -1px 3px var(--b3-list-hover);
 
         .task-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             flex: 1;
-            text-align: center;
+            justify-content: center;
+            padding: 5px 9px;
+            border-radius: 7px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
 
-            &:first-child {
-                text-align: left;
+            &::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: currentColor;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                border-radius: 7px;
             }
-            &:last-child {
-                text-align: right;
+
+            &:hover {
+                &::before {
+                    opacity: 0.08;
+                }
+            }
+
+            .stat-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: currentColor;
+                flex-shrink: 0;
+                box-shadow: 0 0 6px currentColor;
+                animation: pulse 2s ease-in-out infinite;
+            }
+
+            &.task-stat--primary {
+                color: var(--b3-theme-primary);
+
+                .stat-dot {
+                    background: var(--b3-theme-primary);
+                }
+            }
+
+            &.task-stat--success {
+                color: var(--b3-theme-success);
+
+                .stat-dot {
+                    background: var(--b3-theme-success);
+                }
+            }
+
+            &.task-stat--info {
+                color: var(--b3-theme-on-surface);
+
+                .stat-dot {
+                    background: var(--b3-theme-on-surface);
+                }
             }
         }
+    }
+}
+
+// 动画
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.15);
     }
 }
 </style>

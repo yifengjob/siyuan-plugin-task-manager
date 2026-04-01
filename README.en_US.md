@@ -26,6 +26,7 @@ efficiency.
 - 📊 **Real-time Statistics** - Status bar shows total, in-progress, and completed task counts
 - 🔔 **Auto Sync** - Listens to editor changes and updates task status in real-time
 - 🎨 **Beautiful UI** - Modern interface design with automatic light/dark theme adaptation
+- 📱 **Cross-Platform** - Supports desktop, mobile, and browser versions
 
 ## 🚀 Quick Start
 

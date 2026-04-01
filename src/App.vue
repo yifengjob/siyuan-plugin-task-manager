@@ -40,7 +40,7 @@ onMounted(() => {
         config: {
             position: 'RightTop',
             size: {
-                width: 380,
+                width: 400,
                 height: 0,
             },
             icon: 'iconTaskBoard',
