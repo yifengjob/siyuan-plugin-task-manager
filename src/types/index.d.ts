@@ -180,6 +180,7 @@ export interface PluginConfig {
     autoHidePopoverDelay: number;
     filteredNotebooks: string[];
     filteredBlocks: string[];
+    datetimeFormatPattern: string;
 }
 
 export interface PluginInfo {

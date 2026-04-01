@@ -33,7 +33,8 @@ export class SettingsFactory {
 
         this.addAutoHidePopoverDelaySetting();
         this.addDefaultProgressGroupSetting();
-        this.addTaskFilterSetting(); // 新增的文档树过滤器设置
+        this.addDatetimeFormatPatternSetting();
+        this.addTaskFilterSetting();
 
         return this.setting;
     }
@@ -116,6 +117,21 @@ export class SettingsFactory {
                 // 注意：不需要额外的 MutationObserver，因为 destroyCallback 会清理所有挂载的应用
                 return container;
             },
+        });
+    }
+
+    private addDatetimeFormatPatternSetting(): void {
+        this.setting.addItem({
+            title: this.i18n.datetimeFormatPatternTitle,
+            description: this.i18n.datetimeFormatPatternDesc,
+            direction: 'row',
+            createActionElement: () =>
+                this.createInput(
+                    'datetimeFormatPattern',
+                    this.configManager.getConfig().datetimeFormatPattern,
+                    'text',
+                    200
+                ),
         });
     }
 

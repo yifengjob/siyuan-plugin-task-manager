@@ -35,5 +35,7 @@
     "expandAll": "展开全部",
     "collapseAll": "折叠全部",
     "notebookCount": "个笔记本",
-    "docCount": "个文档"
+    "docCount": "个文档",
+    "datetimeFormatPatternTitle": "日期时间格式",
+    "datetimeFormatPatternDesc": "日期时间格式，参考 https://date-fns.org/docs/format。"
 }

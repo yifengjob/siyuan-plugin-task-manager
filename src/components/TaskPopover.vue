@@ -12,6 +12,7 @@ import {
     type Placement,
 } from '@floating-ui/dom';
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
+import { formatDate } from '@/utils/dateTimeUtils.ts';
 
 // ============ Props & Emits ============
 const props = defineProps<{
@@ -25,6 +26,10 @@ const emit = defineEmits<{
 
 // ============ Plugin Instance ============
 const plugin = usePlugin();
+const i18n = plugin.i18n;
+const dateTimeFormatPattern = computed(() => {
+    return plugin.getConfig().datetimeFormatPattern;
+});
 
 // ============ DOM References ============
 const containerRef = ref<HTMLElement | null>(null);
@@ -57,14 +62,7 @@ const form = ref({
 // ============ Computed Properties ============
 const createdStr = computed(() => {
     if (!props.options?.createdDate) return '—';
-    const created = props.options.createdDate;
-    const year = created.substring(0, 4);
-    const month = created.substring(4, 6);
-    const day = created.substring(6, 8);
-    const hour = created.substring(8, 10);
-    const minute = created.substring(10, 12);
-    const second = created.substring(12, 14);
-    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    return formatDate(props.options.createdDate, dateTimeFormatPattern.value);
 });
 
 // ============ Form Methods ============
@@ -515,8 +513,9 @@ onUnmounted(() => {
                                         v-model="form.start"
                                         type="datetime"
                                         :readonly="!options?.isEditable"
-                                        :title="plugin.i18n.start"
-                                        :placeholder="plugin.i18n.start"
+                                        :title="i18n.start"
+                                        :placeholder="i18n.start"
+                                        :formatPattern="dateTimeFormatPattern"
                                     >
                                         <template #input-icon>
                                             <svg class="icon">
@@ -542,8 +541,9 @@ onUnmounted(() => {
                                         v-model="form.planDue"
                                         type="datetime"
                                         :readonly="!options?.isEditable"
-                                        :title="plugin.i18n.planDue"
-                                        :placeholder="plugin.i18n.planDue"
+                                        :title="i18n.planDue"
+                                        :placeholder="i18n.planDue"
+                                        :formatPattern="dateTimeFormatPattern"
                                     >
                                         <template #input-icon>
                                             <svg class="icon">
@@ -571,8 +571,9 @@ onUnmounted(() => {
                                         v-model="form.actualDue"
                                         type="datetime"
                                         :readonly="!options?.isEditable"
-                                        :title="plugin.i18n.actualDue"
-                                        :placeholder="plugin.i18n.actualDue"
+                                        :title="i18n.actualDue"
+                                        :placeholder="i18n.actualDue"
+                                        :formatPattern="dateTimeFormatPattern"
                                     >
                                         <template #input-icon>
                                             <svg class="icon">
@@ -590,19 +591,19 @@ onUnmounted(() => {
                                     <select
                                         v-model="form.priority"
                                         :disabled="!options?.isEditable"
-                                        :title="plugin.i18n.priority"
+                                        :title="i18n.priority"
                                     >
                                         <option value="high">
-                                            {{ plugin.i18n.priorityHigh }}
+                                            {{ i18n.priorityHigh }}
                                         </option>
                                         <option value="medium">
-                                            {{ plugin.i18n.priorityMedium }}
+                                            {{ i18n.priorityMedium }}
                                         </option>
                                         <option value="normal">
-                                            {{ plugin.i18n.priorityNormal }}
+                                            {{ i18n.priorityNormal }}
                                         </option>
                                         <option value="low">
-                                            {{ plugin.i18n.priorityLow }}
+                                            {{ i18n.priorityLow }}
                                         </option>
                                     </select>
                                 </span>
@@ -618,8 +619,8 @@ onUnmounted(() => {
                                         v-model="form.notes"
                                         :readonly="!options?.isEditable"
                                         rows="3"
-                                        :title="plugin.i18n.notes"
-                                        :placeholder="plugin.i18n.notes"
+                                        :title="i18n.notes"
+                                        :placeholder="i18n.notes"
                                         @input="onTextareaInput"
                                     />
                                 </span>
@@ -637,13 +638,13 @@ onUnmounted(() => {
                                         class="task-save-btn b3-button b3-button--outline"
                                         @click="handleSave"
                                     >
-                                        {{ plugin.i18n.save }}
+                                        {{ i18n.save }}
                                     </button>
                                     <button
                                         class="task-cancel-btn b3-button b3-button--outline"
                                         @click="handleCancel"
                                     >
-                                        {{ plugin.i18n.cancel }}
+                                        {{ i18n.cancel }}
                                     </button>
                                 </div>
                             </div>

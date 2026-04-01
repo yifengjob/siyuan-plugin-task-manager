@@ -35,5 +35,7 @@
     "expandAll": "Expand All",
     "collapseAll": "Collapse All",
     "notebookCount": "notebooks",
-    "docCount": "blocks"
+    "docCount": "blocks",
+    "datetimeFormatTitle": "Datetime format",
+    "datetimeFormatDesc": "The format of the datetime. See https://date-fns.org/docs/format for more information."
 }

@@ -9,6 +9,7 @@ export class PluginConfigManager {
         autoHidePopoverDelay: 3,
         filteredNotebooks: [],
         filteredBlocks: [],
+        datetimeFormatPattern: 'yyyy-MM-dd HH:mm',
     };
 
     private unSavedConfig: PluginConfig | null = null;

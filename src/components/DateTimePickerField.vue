@@ -1,7 +1,6 @@
 <template>
     <VueDatePicker
         v-model="localDate"
-        :format="format"
         :formats="formats"
         :locale="locale"
         :placeholder="placeholder || title || ''"
@@ -30,6 +29,7 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 import { zhCN, enUS } from 'date-fns/locale';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { usePlugin } from '@/utils/pluginInstance';
+import { formatDateObject, parseDate } from '@/utils/dateTimeUtils';
 
 // ============ Props ============
 const props = defineProps<{
@@ -38,7 +38,7 @@ const props = defineProps<{
     title?: string;
     readonly?: boolean;
     type?: 'date' | 'datetime' | 'time';
-    enableSeconds?: boolean;
+    formatPattern?: string; // 显示格式，如 'yyyy-MM-dd', 'yyyy-MM-dd HH:mm:ss'
 }>();
 
 const emit = defineEmits<{
@@ -56,16 +56,26 @@ const type = props.type ?? 'date';
 const localDate = ref<Date | null>(null);
 const isDark = ref(false);
 const locale = ref(zhCN); // 默认中文，后续根据插件语言更新
-// 提取格式化模式生成逻辑（避免重复）
-const createFormatPatterns = (
-    componentType: 'date' | 'datetime' | 'time',
-    showSeconds: boolean
-) => {
-    const timeFormat = showSeconds ? 'HH:mm:ss' : 'HH:mm';
-    const dateTimeFormat = showSeconds
-        ? 'yyyy-MM-dd HH:mm:ss'
-        : 'yyyy-MM-dd HH:mm';
 
+// ============ 格式化模式映射 ============
+// VueDatePicker 使用 date-fns 的格式标记
+const FORMAT_PATTERNS: Record<string, Record<string, string>> = {
+    date: {
+        pattern: 'yyyy-MM-dd',
+    },
+    datetime: {
+        pattern: 'yyyy-MM-dd HH:mm:ss',
+    },
+    time: {
+        pattern: 'HH:mm:ss',
+    },
+};
+
+// ============ 计算属性：显示格式 ============
+const dateTimeFormatPattern = computed(() => {
+    return props.formatPattern || FORMAT_PATTERNS[type].pattern;
+});
+const formats = computed(() => {
     return {
         second: 'ss',
         minute: 'mm',
@@ -74,31 +84,17 @@ const createFormatPatterns = (
         week: 'EEE',
         month: 'MM',
         year: 'yyyy',
-        input:
-            componentType === 'time'
-                ? timeFormat
-                : componentType === 'date'
-                  ? 'yyyy-MM-dd'
-                  : dateTimeFormat,
-        preview:
-            componentType === 'time'
-                ? timeFormat
-                : componentType === 'date'
-                  ? 'yyyy-MM-dd'
-                  : dateTimeFormat,
+        input: dateTimeFormatPattern.value,
+        preview: dateTimeFormatPattern.value,
     };
-};
-
-// 使用 computed 确保响应式更新
-const formats = computed(() =>
-    createFormatPatterns(type, props.enableSeconds ?? false)
-);
+});
 
 // 日期选择器配置
-const timeConfig = {
+const timeConfig = computed(() => ({
     enableTimePicker: type === 'datetime',
-    enableSeconds: props.enableSeconds || false,
-};
+    enableSeconds: dateTimeFormatPattern.value.includes('ss'),
+}));
+
 const actionRow = {
     selectBtnLabel: i18n.btnOk,
     cancelBtnLabel: i18n.btnCancel,
@@ -154,6 +150,9 @@ const updateLocale = () => {
 updateLocale();
 
 // ============ 日期解析与格式化 ==========
+/**
+ * 将字符串解析为 Date 对象
+ */
 const parseDateTime = (value: string): Date | null => {
     if (!value) return null;
 
@@ -170,58 +169,18 @@ const parseDateTime = (value: string): Date | null => {
         return null;
     }
 
-    // 处理日期格式 YYYY-MM-DD 或日期时间格式 YYYY-MM-DD HH:mm:ss
-    let dateStr = value;
-    if (type === 'datetime') {
-        // 如果只包含日期部分，补上 00:00:00
-        if (!dateStr.includes(' ') && !dateStr.includes('T')) {
-            dateStr += ' 00:00:00';
-        }
-    }
-    const parsed = new Date(dateStr);
-    return isNaN(parsed.getTime()) ? null : parsed;
+    // 使用通用工具函数解析日期
+    return parseDate(value);
 };
 
+/**
+ * 将 Date 对象格式化为字符串
+ */
 const formatDateTime = (date: Date | null): string => {
     if (!date) return '';
 
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-
-    if (type === 'date') {
-        return `${year}-${month}-${day}`;
-    } else if (type === 'time') {
-        return `${hours}:${minutes}:${seconds}`;
-    } else {
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    }
-};
-
-// ============ 格式函数（用于显示） ==========
-const format = (date: Date): string => {
-    if (type === 'date') {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    } else if (type === 'time') {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    } else {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    }
+    // 使用通用工具函数格式化
+    return formatDateObject(date, dateTimeFormatPattern.value);
 };
 
 // ============ 监听数据变化 ==========
@@ -305,7 +264,7 @@ watch(localDate, (newVal) => {
     --dp-range-between-dates-text-color: var(--b3-theme-on-background);
     --dp-range-between-border-color: var(--b3-theme-primary-light);
 }
-//
+
 /* 布局变量调整（与思源风格一致） */
 .dp__theme_light,
 .dp__theme_dark {
