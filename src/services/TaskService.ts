@@ -3,7 +3,6 @@ import { BlockId, BlockInfo, Task, TaskAttrs } from '@/types';
 import { DataType } from '@/types/api.ts';
 import { TaskAttribute } from '@/types/task.ts';
 import { usePlugin } from '@/utils/pluginInstance.ts';
-import { escapeSql } from '@/utils';
 
 export class TaskService {
     constructor(private api: ApiService) {}
@@ -14,49 +13,67 @@ export class TaskService {
         const plugin = usePlugin();
         const filteredNotebooks = plugin.getConfig().filteredNotebooks || [];
         const filteredBlocks = plugin.getConfig().filteredBlocks || [];
-        // 构建过滤条件
+
+        // 构建过滤条件 - 使用参数化占位符
         let whereClause = `WHERE b.type = 'i' AND b.subtype = 't'`;
+        const params: Record<string, string> = {};
 
         // 添加笔记本过滤条件
         if (filteredNotebooks && filteredNotebooks.length > 0) {
             const notebookPlaceholders = filteredNotebooks
-                .map((box) => `'${escapeSql(box)}'`)
+                .map((_box, index) => `{{nb${index}}}`)
                 .join(',');
             whereClause += ` AND b.box NOT IN (${notebookPlaceholders})`;
+
+            // 添加参数
+            filteredNotebooks.forEach((box, index) => {
+                params[`nb${index}`] = box;
+            });
         }
 
         // 添加块过滤条件
         if (filteredBlocks && filteredBlocks.length > 0) {
             const blockPlaceholders = filteredBlocks
-                .map((blockId) => `'${escapeSql(blockId)}'`)
+                .map((_blockId, index) => `{{blk${index}}}`)
                 .join(',');
             whereClause += ` AND b.id NOT IN (${blockPlaceholders})`;
+
+            // 添加参数
+            filteredBlocks.forEach((blockId, index) => {
+                params[`blk${index}`] = blockId;
+            });
         }
 
-        const sql = `SELECT b.id,
-                            b.box,
-                            b.hpath,
-                            b.root_id,
-                            b.content,
-                            b.markdown,
-                            b.created,
-                            b.updated,
-                            b.ial,
-                            d.fcontent as root_title
-                     FROM blocks b
-                              INNER JOIN blocks d ON b.root_id = d.id
-                     ${whereClause}
-                     ORDER BY b.created ASC`;
+        const sqlStmt = `SELECT b.id,
+                                b.box,
+                                b.hpath,
+                                b.root_id,
+                                b.content,
+                                b.markdown,
+                                b.created,
+                                b.updated,
+                                b.ial,
+                                d.fcontent as root_title
+                         FROM blocks b
+                                  INNER JOIN blocks d ON b.root_id = d.id
+                             ${whereClause}
+                         ORDER BY b.created ASC`;
 
-        const rows: { [key: string]: string }[] = await this.api.sql(sql);
-        const books = await this.api.lsNotebooks();
+        const rows: { [key: string]: string }[] = await this.api.sql(
+            sqlStmt,
+            params
+        );
 
+        // 性能优化：只在有数据时才获取笔记本列表
         if (!rows || rows.length === 0) return [];
+
+        const books = await this.api.lsNotebooks();
+        const notebookMap = new Map(books.notebooks.map((n) => [n.id, n.name]));
 
         return rows.map((row: { [key: string]: string }) => ({
             id: row.id,
             box: row.box,
-            boxTitle: books.notebooks.find((n) => n.id === row.box)?.name || '',
+            boxTitle: notebookMap.get(row.box) || '',
             hpath: row.hpath,
             rootId: row.root_id,
             rootTitle: row.root_title || '',
@@ -173,7 +190,7 @@ export class TaskService {
      *
      * 该方法会执行以下操作：
      * 1. 保存任务块的现有属性
-     * 2. 更新任务的 Markdown内容（checkbox 状态）
+     * 2. 更新任务的 Markdown 内容（checkbox 状态）
      * 3. 更新任务现有属性的完成状态和实际完成日期属性
      * 4. 将任务原有的属性写回数据库
      *
@@ -182,30 +199,48 @@ export class TaskService {
      * @returns 无返回值，如果获取 Markdown 失败则提前返回
      */
     async setTaskStatus(blockId: BlockId, completed: boolean) {
-        // 获取原始属性
-        const originalAttrs = await this.api.getBlockAttrs(blockId);
+        try {
+            // 获取原始属性
+            const originalAttrs = await this.api.getBlockAttrs(blockId);
 
-        const markdown = await this.getTaskMarkdown(blockId);
-        if (!markdown) return;
-        let newMarkdown = markdown;
-        if (completed) {
-            newMarkdown = newMarkdown.replace(/^-\s*\[\s*]/, '- [X]');
-        } else {
-            newMarkdown = newMarkdown.replace(/^-\s*\[X]/i, '- [ ]');
+            const markdown = await this.getTaskMarkdown(blockId);
+            if (!markdown) {
+                console.warn(
+                    `[TaskService] Failed to get markdown for task ${blockId}`
+                );
+                return;
+            }
+
+            let newMarkdown = markdown;
+            if (completed) {
+                newMarkdown = newMarkdown.replace(/^-\s*\[\s*]/, '- [X]');
+            } else {
+                newMarkdown = newMarkdown.replace(/^-\s*\[X]/i, '- [ ]');
+            }
+
+            if (newMarkdown === markdown) {
+                // 状态未改变，无需更新
+                return;
+            }
+
+            await this.updateTask(blockId, newMarkdown);
+
+            // 更新属性
+            const completeAttrs = this.buildTaskCompletedAttrs(completed);
+            originalAttrs[TaskAttribute.completed] = completeAttrs.completed
+                ? 'true'
+                : '';
+            originalAttrs[TaskAttribute.actualDue] = completeAttrs.actualDue;
+
+            await this.api.setBlockAttrs(blockId, originalAttrs);
+        } catch (error) {
+            console.error(
+                `[TaskService] Failed to set task status for ${blockId}:`,
+                error
+            );
+            throw error;
         }
-        if (newMarkdown === markdown) return;
-        await this.updateTask(blockId, newMarkdown);
-
-        // 更新属性
-        const completeAttrs = this.buildTaskCompletedAttrs(completed);
-        originalAttrs[TaskAttribute.completed] = completeAttrs.completed
-            ? 'true'
-            : '';
-        originalAttrs[TaskAttribute.actualDue] = completeAttrs.actualDue;
-
-        await this.api.setBlockAttrs(blockId, originalAttrs);
     }
-
     buildTaskCompletedAttrs(completed: boolean) {
         const attrs: Partial<TaskAttrs> = { completed };
         if (completed) {

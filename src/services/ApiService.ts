@@ -29,6 +29,22 @@ import {
 } from '@/types/api.ts';
 
 export class ApiService {
+    /**
+     * 转义字符串以防止 SQL 注入
+     * @param str 需要转义的字符串
+     * @returns 转义后的字符串
+     */
+    private escapeSql(str: string): string {
+        if (typeof str !== 'string') {
+            return str;
+        }
+        // SQLite 特殊字符转义
+        return str
+            .replace(/'/g, "''") // 单引号转双单引号
+            .replace(/"/g, '""') // 双引号转双双引号
+            .replace(/\\/g, '\\\\') // 反斜杠转双反斜杠
+            .replace(/\0/g, '\\0'); // 空字符转义
+    }
     async request(url: string, data: any) {
         const response: IWebSocketData = await fetchSyncPost(url, data);
         return response.code === 0 ? response.data : null;
@@ -289,16 +305,20 @@ export class ApiService {
     }
 
     async getBlockMarkdown(blockId: string) {
-        const result = await this.sql(`SELECT markdown
-                                   FROM blocks
-                                   WHERE id = '${blockId}'`);
+        // ✅ 使用转义防止 SQL 注入
+        const result = await this.sql(
+            `SELECT markdown FROM blocks WHERE id = {{id}}`,
+            { id: blockId }
+        );
         return (result[0]?.markdown as string) ?? null;
     }
 
     async getBlockCreated(blockId: BlockId) {
-        const result = await this.sql(`SELECT created
-                                   FROM blocks
-                                   WHERE id = '${blockId}'`);
+        // ✅ 使用转义防止 SQL 注入
+        const result = await this.sql(
+            `SELECT created FROM blocks WHERE id = {{id}}`,
+            { id: blockId }
+        );
         return (result[0]?.created as string) ?? null;
     }
 
@@ -352,20 +372,40 @@ export class ApiService {
 
     // **************************************** SQL ****************************************
 
-    async sql(sql: string): Promise<any[]> {
+    /**
+     * 执行 SQL 查询
+     * ⚠️ 注意：思源笔记 API 不支持参数化查询，需要手动转义用户输入
+     * @param sql SQL 语句模板，使用 {{value}} 作为占位符
+     * @param params 参数对象，key 为占位符名称，value 为实际值（会自动转义）
+     *
+     * @example
+     * await sql("SELECT * FROM blocks WHERE id = '{{id}}'", { id: blockId })
+     */
+    async sql(sql: string, params?: Record<string, any>): Promise<any[]> {
+        let finalSql = sql;
+
+        if (params) {
+            for (const [key, value] of Object.entries(params)) {
+                const escapedValue = this.escapeSql(value);
+                finalSql = finalSql.replace(
+                    new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+                    `'${escapedValue}'`
+                );
+            }
+        }
         const sqlData = {
-            stmt: sql,
+            stmt: finalSql,
         };
         const url = '/api/query/sql';
         return this.request(url, sqlData);
     }
 
     async getBlockByID(blockId: string): Promise<Block> {
-        const sqlScript = `select *
-                       from blocks
-                       where id = '${blockId}'`;
-        const data = await this.sql(sqlScript);
-        return data[0];
+        const result = await this.sql(
+            `SELECT * FROM blocks WHERE id = {{id}}`,
+            { id: blockId }
+        );
+        return result[0];
     }
 
     // **************************************** Template ****************************************
@@ -403,8 +443,6 @@ export class ApiService {
         const form = new FormData();
         form.append('path', path);
         form.append('isDir', isDir.toString());
-        // Copyright (c) 2023, terwer.
-        // https://github.com/terwer/siyuan-plugin-importer/blob/v1.4.1/src/api/kernel-api.ts
         form.append('modTime', Math.floor(Date.now() / 1000).toString());
         form.append('file', file);
         const url = '/api/file/putFile';

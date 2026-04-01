@@ -123,9 +123,9 @@ export class SettingsFactory {
      * 销毁所有已挂载的 Vue 应用（用于设置面板销毁时的清理）
      */
     private destroyAllVueApps(): void {
-        for (const [_container, app] of this.vueApps.entries()) {
-            app.unmount();
-            // 可选：从 DOM 中移除容器，但容器通常已被 Setting 面板移除
+        for (const [container, app] of this.vueApps.entries()) {
+            app?.unmount();
+            container?.remove();
         }
         this.vueApps.clear();
     }
