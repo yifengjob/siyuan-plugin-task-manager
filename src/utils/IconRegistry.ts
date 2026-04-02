@@ -16,66 +16,65 @@ import iconNotebook from '@/assets/icons/notebook.svg?raw';
 import iconDocument from '@/assets/icons/document.svg?raw';
 
 interface IconDefinition {
-    content: string;
-    symbolId: string;
+  content: string;
+  symbolId: string;
 }
 
 const ICONS: IconDefinition[] = [
-    { content: iconTaskBoard, symbolId: 'iconTaskBoard' },
-    { content: iconTaskCreated, symbolId: 'iconTaskCreated' },
-    { content: iconTaskStart, symbolId: 'iconTaskStart' },
-    { content: iconTaskPlanDue, symbolId: 'iconTaskPlanDue' },
-    { content: iconTaskActualDue, symbolId: 'iconTaskActualDue' },
-    { content: iconTaskPriority, symbolId: 'iconTaskPriority' },
-    { content: iconTaskNotes, symbolId: 'iconTaskNotes' },
-    { content: iconTaskStatusDue, symbolId: 'iconTaskStatusDue' },
-    { content: iconTaskStatusUnDue, symbolId: 'iconTaskStatusUnDue' },
-    { content: iconTaskPriorityHigh, symbolId: 'iconTaskPriorityHigh' },
-    { content: iconTaskPriorityMedium, symbolId: 'iconTaskPriorityMedium' },
-    { content: iconTaskPriorityNormal, symbolId: 'iconTaskPriorityNormal' },
-    { content: iconTaskPriorityLow, symbolId: 'iconTaskPriorityLow' },
-    { content: iconNotebook, symbolId: 'iconNotebook' },
-    { content: iconDocument, symbolId: 'iconDocument' },
+  { content: iconTaskBoard, symbolId: 'iconTaskBoard' },
+  { content: iconTaskCreated, symbolId: 'iconTaskCreated' },
+  { content: iconTaskStart, symbolId: 'iconTaskStart' },
+  { content: iconTaskPlanDue, symbolId: 'iconTaskPlanDue' },
+  { content: iconTaskActualDue, symbolId: 'iconTaskActualDue' },
+  { content: iconTaskPriority, symbolId: 'iconTaskPriority' },
+  { content: iconTaskNotes, symbolId: 'iconTaskNotes' },
+  { content: iconTaskStatusDue, symbolId: 'iconTaskStatusDue' },
+  { content: iconTaskStatusUnDue, symbolId: 'iconTaskStatusUnDue' },
+  { content: iconTaskPriorityHigh, symbolId: 'iconTaskPriorityHigh' },
+  { content: iconTaskPriorityMedium, symbolId: 'iconTaskPriorityMedium' },
+  { content: iconTaskPriorityNormal, symbolId: 'iconTaskPriorityNormal' },
+  { content: iconTaskPriorityLow, symbolId: 'iconTaskPriorityLow' },
+  { content: iconNotebook, symbolId: 'iconNotebook' },
+  { content: iconDocument, symbolId: 'iconDocument' },
 ];
 export class IconRegistry {
-    constructor(private plugin: TaskManagerPlugin) {}
-    /**
-     * 注册所有图标
-     */
-    registerIcons() {
-        ICONS.forEach((icon) => {
-            // 确保 SVG 有正确的 id
-            const svgWithId = this.ensureSvgId(icon.content, icon.symbolId);
-            this.plugin.addIcons(svgWithId);
-        });
+  constructor(private plugin: TaskManagerPlugin) {}
+  /**
+   * 注册所有图标
+   */
+  registerIcons() {
+    ICONS.forEach((icon) => {
+      // 确保 SVG 有正确的 id
+      const svgWithId = this.ensureSvgId(icon.content, icon.symbolId);
+      this.plugin.addIcons(svgWithId);
+    });
+  }
+  /**
+   * 确保 SVG 元素有正确的 id
+   */
+  private ensureSvgId(svgContent: string, symbolId: string): string {
+    // 使用更灵活的正则表达式，匹配 <svg> 标签内的任意位置的 id
+    const svgTagMatch = svgContent.match(/<svg\s+([^>]*)>/);
+
+    if (!svgTagMatch) {
+      return svgContent;
     }
-    /**
-     * 确保 SVG 元素有正确的 id
-     */
-    private ensureSvgId(svgContent: string, symbolId: string): string {
-        // 使用更灵活的正则表达式，匹配 <svg> 标签内的任意位置的 id
-        const svgTagMatch = svgContent.match(/<svg\s+([^>]*)>/);
 
-        if (!svgTagMatch) {
-            return svgContent;
-        }
+    const svgAttributes = svgTagMatch[1];
+    const hasId = /(\s|^)id=["'][^"']*["']/.test(svgAttributes);
 
-        const svgAttributes = svgTagMatch[1];
-        const hasId = /(\s|^)id=["'][^"']*["']/.test(svgAttributes);
-
-        if (hasId) {
-            // 替换现有 id（无论 id 在什么位置）
-            return svgContent.replace(
-                /(\s|^)id=["'][^"']*["']/,
-                (_match: string, prefix: string) => `${prefix}id="${symbolId}"`
-            );
-        } else {
-            // 在 <svg> 标签中添加 id（放在最后，> 之前）
-            return svgContent.replace(
-                /<svg\s+([^>]*)>/,
-                (_match: string, attrs: string) =>
-                    `<svg ${attrs} id="${symbolId}">`
-            );
-        }
+    if (hasId) {
+      // 替换现有 id（无论 id 在什么位置）
+      return svgContent.replace(
+        /(\s|^)id=["'][^"']*["']/,
+        (_match: string, prefix: string) => `${prefix}id="${symbolId}"`
+      );
+    } else {
+      // 在 <svg> 标签中添加 id（放在最后，> 之前）
+      return svgContent.replace(
+        /<svg\s+([^>]*)>/,
+        (_match: string, attrs: string) => `<svg ${attrs} id="${symbolId}">`
+      );
     }
+  }
 }

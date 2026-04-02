@@ -13,84 +13,81 @@ const taskStore = useTaskStore();
 const popoverOptions = ref(null);
 
 const handlePopoverSave = async (attrs: Partial<TaskAttrs>) => {
-    if (popoverOptions.value?.taskId) {
-        await taskStore.updateTaskAttributes(
-            popoverOptions.value.taskId,
-            attrs
-        );
-        if (popoverOptions.value.completed !== attrs.completed) {
-            await taskStore.toggleTaskStatus(
-                popoverOptions.value.taskId,
-                attrs.completed
-            );
-        }
-        popoverOptions.value = null;
+  if (popoverOptions.value?.taskId) {
+    await taskStore.updateTaskAttributes(popoverOptions.value.taskId, attrs);
+    if (popoverOptions.value.completed !== attrs.completed) {
+      await taskStore.toggleTaskStatus(
+        popoverOptions.value.taskId,
+        attrs.completed
+      );
     }
+    popoverOptions.value = null;
+  }
 };
 
 const handlePopoverClose = () => {
-    popoverOptions.value = null;
+  popoverOptions.value = null;
 };
 
 onMounted(() => {
-    const iconRegister = new IconRegistry(plugin);
-    iconRegister.registerIcons();
+  const iconRegister = new IconRegistry(plugin);
+  iconRegister.registerIcons();
 
-    plugin.addDock({
-        config: {
-            position: 'RightTop',
-            size: {
-                width: 360,
-                height: 0,
-            },
-            icon: 'iconTaskBoard',
-            title: plugin.i18n.sidebarTitle,
-        },
-        data: {},
-        type: 'task-manager-dock',
-        init: async (dock: any) => {
-            const container = dock.element;
-            container.classList.add('task-sidebar');
-            container.id = `${plugin.name || 'plugin'}-dock-container`;
-            container.innerHTML = '';
-            dockApp = createApp(Sidebar);
-            dockApp.mount(container);
-        },
-        destroy: () => {
-            dockApp?.unmount();
-            dockApp = null;
-        },
-    });
+  plugin.addDock({
+    config: {
+      position: 'RightTop',
+      size: {
+        width: 360,
+        height: 0,
+      },
+      icon: 'iconTaskBoard',
+      title: plugin.i18n.sidebarTitle,
+    },
+    data: {},
+    type: 'task-manager-dock',
+    init: async (dock: any) => {
+      const container = dock.element;
+      container.classList.add('task-sidebar');
+      container.id = `${plugin.name || 'plugin'}-dock-container`;
+      container.innerHTML = '';
+      dockApp = createApp(Sidebar);
+      dockApp.mount(container);
+    },
+    destroy: () => {
+      dockApp?.unmount();
+      dockApp = null;
+    },
+  });
 });
 
 onUnmounted(() => {
-    dockApp?.unmount();
-    dockApp = null;
+  dockApp?.unmount();
+  dockApp = null;
 });
 
 // 暴露方法给外部调用
 defineExpose({
-    showPopover: (options: PopoverOptions) => {
-        popoverOptions.value = options;
-    },
-    hidePopover: () => {
-        popoverOptions.value = null;
-    },
+  showPopover: (options: PopoverOptions) => {
+    popoverOptions.value = options;
+  },
+  hidePopover: () => {
+    popoverOptions.value = null;
+  },
 });
 </script>
 
 <template>
-    <div class="task-manager-app">
-        <TaskPopover
-            :options="popoverOptions"
-            @save="handlePopoverSave"
-            @close="handlePopoverClose"
-        />
-    </div>
+  <div class="task-manager-app">
+    <TaskPopover
+      :options="popoverOptions"
+      @save="handlePopoverSave"
+      @close="handlePopoverClose"
+    />
+  </div>
 </template>
 
 <style lang="scss" scoped>
 .task-manager-app {
-    position: relative;
+  position: relative;
 }
 </style>

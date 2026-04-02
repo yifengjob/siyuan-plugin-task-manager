@@ -6,13 +6,13 @@ import { IProtyle } from 'siyuan';
  * 从点击事件中提取目标元素
  */
 export const isElementEditable = (element: HTMLElement): boolean => {
-    while (element) {
-        const editable = element.contentEditable;
-        if (editable === 'true') return true;
-        if (editable === 'false') return false;
-        element = element.parentElement;
-    }
-    return false;
+  while (element) {
+    const editable = element.contentEditable;
+    if (editable === 'true') return true;
+    if (editable === 'false') return false;
+    element = element.parentElement;
+  }
+  return false;
 };
 
 /**
@@ -23,31 +23,31 @@ export const isElementEditable = (element: HTMLElement): boolean => {
  * @returns 目标元素和原始鼠标事件
  */
 export const getClickTargetFromEvent = (
-    eventData: CustomEvent<{ protyle: IProtyle; event: MouseEvent }>
+  eventData: CustomEvent<{ protyle: IProtyle; event: MouseEvent }>
 ): {
-    targetElement: HTMLElement | null;
-    originalEvent: MouseEvent | null;
+  targetElement: HTMLElement | null;
+  originalEvent: MouseEvent | null;
 } => {
-    const detail = eventData.detail;
-    let targetElement: HTMLElement | null = null;
-    let originalEvent: MouseEvent | null = null;
+  const detail = eventData.detail;
+  let targetElement: HTMLElement | null = null;
+  let originalEvent: MouseEvent | null = null;
 
-    // 尝试从 detail.event 获取
-    if (detail?.event) {
-        originalEvent = detail.event;
-        const eventTarget = originalEvent.target as HTMLElement;
-        targetElement = eventTarget?.closest('[data-node-id]') || eventTarget;
-    }
+  // 尝试从 detail.event 获取
+  if (detail?.event) {
+    originalEvent = detail.event;
+    const eventTarget = originalEvent.target as HTMLElement;
+    targetElement = eventTarget?.closest('[data-node-id]') || eventTarget;
+  }
 
-    // 尝试从 currentTarget 获取（仅当 currentTarget 是 HTMLElement 时）
-    if (!targetElement && eventData.currentTarget instanceof HTMLElement) {
-        targetElement = eventData.currentTarget;
-    }
+  // 尝试从 currentTarget 获取（仅当 currentTarget 是 HTMLElement 时）
+  if (!targetElement && eventData.currentTarget instanceof HTMLElement) {
+    targetElement = eventData.currentTarget;
+  }
 
-    return {
-        targetElement,
-        originalEvent,
-    };
+  return {
+    targetElement,
+    originalEvent,
+  };
 };
 
 /**
@@ -57,13 +57,13 @@ export const getClickTargetFromEvent = (
  * @returns HTMLElement 或 null
  */
 export const extractTargetElement = (node: Node): HTMLElement | null => {
-    if (node instanceof HTMLElement) {
-        return node;
-    }
-    if (node.parentNode instanceof HTMLElement) {
-        return node.parentNode;
-    }
-    return null;
+  if (node instanceof HTMLElement) {
+    return node;
+  }
+  if (node.parentNode instanceof HTMLElement) {
+    return node.parentNode;
+  }
+  return null;
 };
 
 /**
@@ -74,31 +74,31 @@ export const extractTargetElement = (node: Node): HTMLElement | null => {
  * @returns 任务块元素或 null
  */
 export const findTaskElement = (
-    targetElement: HTMLElement
+  targetElement: HTMLElement
 ): HTMLElement | null => {
-    const taskElement = targetElement.closest(
-        '[data-node-id][data-subtype="t"][data-type="NodeListItem"]'
-    );
-    if (taskElement) return taskElement as HTMLElement;
-    return null;
+  const taskElement = targetElement.closest(
+    '[data-node-id][data-subtype="t"][data-type="NodeListItem"]'
+  );
+  if (taskElement) return taskElement as HTMLElement;
+  return null;
 };
 
 export const findTaskElementFromBlockId = (
-    blockId: string
+  blockId: string
 ): HTMLElement | null => {
-    const targetElements = document.querySelectorAll(
-        `[data-node-id="${blockId}"]`
-    ) as NodeListOf<Element>;
-    targetElements.forEach((element) => {
-        const targetElement = extractTargetElement(element);
-        const taskElement = findTaskElement(targetElement);
-        if (taskElement) return taskElement;
-    });
-    return null;
+  const targetElements = document.querySelectorAll(
+    `[data-node-id="${blockId}"]`
+  ) as NodeListOf<Element>;
+  targetElements.forEach((element) => {
+    const targetElement = extractTargetElement(element);
+    const taskElement = findTaskElement(targetElement);
+    if (taskElement) return taskElement;
+  });
+  return null;
 };
 
 export const getBlockIdFromElement = (element: HTMLElement): string | null => {
-    const blockId = element.getAttribute('data-node-id');
-    if (blockId) return blockId;
-    return null;
+  const blockId = element.getAttribute('data-node-id');
+  if (blockId) return blockId;
+  return null;
 };
