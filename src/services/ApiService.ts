@@ -499,11 +499,6 @@ export class ApiService {
 
     // **************************************** Notification ****************************************
 
-    // /api/notification/pushMsg
-    // {
-    //     "msg": "test",
-    //     "timeout": 7000
-    //   }
     async pushMsg(msg: string, timeout: number = 7000) {
         const payload = {
             msg,

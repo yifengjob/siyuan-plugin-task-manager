@@ -13,6 +13,7 @@ import {
 } from '@floating-ui/dom';
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
 import { formatDate } from '@/utils/dateTimeUtils.ts';
+import { useConfigStore } from '@/stores/config.store.ts';
 
 // ============ Props & Emits ============
 const props = defineProps<{
@@ -27,8 +28,9 @@ const emit = defineEmits<{
 // ============ Plugin Instance ============
 const plugin = usePlugin();
 const i18n = plugin.i18n;
+const configStore = useConfigStore();
 const dateTimeFormatPattern = computed(() => {
-    return plugin.getConfig().datetimeFormatPattern;
+    return configStore.config.datetimeFormatPattern;
 });
 
 // ============ DOM References ============
@@ -410,6 +412,7 @@ const show = () => {
         updatePosition(); // 立即更新一次
     });
 
+    // 自动隐藏定时器
     if (plugin.getConfig().autoHidePopoverDelay > 0) {
         autoCloseTimer = setTimeout(() => {
             if (!isMouseOverPopover) close();
@@ -679,8 +682,9 @@ onUnmounted(() => {
 .task-popover {
     pointer-events: auto;
     background: var(--b3-theme-background);
-    border-radius: 8px;
+    color: var(--b3-theme-on-background);
     box-shadow: var(--b3-dialog-shadow);
+    border-radius: 8px;
     border: transparent;
     padding: 8px;
     width: fit-content;
@@ -688,7 +692,6 @@ onUnmounted(() => {
     box-sizing: border-box;
     font-family: var(--b3-font-family), serif;
     font-size: var(--b3-font-size);
-    color: var(--b3-theme-on-background);
     transition: opacity 0.2s ease;
 }
 .popover-arrow {
@@ -735,7 +738,7 @@ onUnmounted(() => {
     padding: 8px;
     width: fit-content;
     min-width: 200px;
-    max-width: 300px;
+    max-width: 310px;
 }
 .task-tooltip-row {
     display: flex;
@@ -810,6 +813,7 @@ onUnmounted(() => {
     padding: 4px 8px;
     background: var(--b3-theme-surface);
     border-radius: 30px;
+    font-family: var(--b3-font-family-code), var(--b3-font-family), sans-serif;
     font-size: 13px;
     color: var(--b3-theme-on-surface);
     div {

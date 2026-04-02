@@ -27,9 +27,9 @@
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import { zhCN, enUS } from 'date-fns/locale';
-import '@vuepic/vue-datepicker/dist/main.css';
 import { usePlugin } from '@/utils/pluginInstance';
 import { formatDateObject, parseDate } from '@/utils/dateTimeUtils';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 // ============ Props ============
 const props = defineProps<{
@@ -268,13 +268,13 @@ watch(localDate, (newVal) => {
 /* 布局变量调整（与思源风格一致） */
 .dp__theme_light,
 .dp__theme_dark {
+    --dp-menu-min-width: 320px;
     --dp-border-radius: var(--b3-border-radius);
     --dp-cell-border-radius: var(--b3-border-radius);
     --dp-common-transition: var(--b3-transition);
     --dp-font-size: var(--b3-font-size);
     --dp-font-family:
-        var(--b3-font-family), system-ui, -apple-system, BlinkMacSystemFont,
-        'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        var(--b3-font-family-code), var(--b3-font-family), sans-serif;
 }
 
 .task-datetimepicker.is-readonly {

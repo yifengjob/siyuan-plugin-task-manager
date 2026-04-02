@@ -3,6 +3,7 @@ import type { Task } from '@/types';
 import { computed } from 'vue';
 import { usePlugin } from '@/utils/pluginInstance.ts';
 import { formatDate } from '@/utils/dateTimeUtils.ts';
+import { useConfigStore } from '@/stores/config.store.ts';
 
 const props = defineProps<{ task: Task }>();
 const emit = defineEmits<{
@@ -11,8 +12,9 @@ const emit = defineEmits<{
 }>();
 const plugin = usePlugin();
 const i18n = plugin.i18n;
+const configStore = useConfigStore();
 const dateTimeFormatPattern = computed(() => {
-    return plugin.getConfig().datetimeFormatPattern;
+    return configStore.config.datetimeFormatPattern;
 });
 
 const priorityText = computed(() => {

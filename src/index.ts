@@ -55,9 +55,13 @@ export default class TaskManagerPlugin extends Plugin {
 
     async onload(): Promise<void> {
         setPlugin(this);
-        await this.loadPluginConfig();
-        this.setupSettings();
+        // 先挂载 Vue 应用，初始化 Pinia 和 Store
         await this.mountVueApp();
+        // 然后加载配置，此时 Store 已就绪
+        await this.loadPluginConfig();
+        // 设置插件配置界面
+        this.setupSettings();
+        // 绑定事件监听器
         this.bindEventListeners();
     }
 
@@ -197,7 +201,6 @@ export default class TaskManagerPlugin extends Plugin {
         try {
             this.cleanup();
             await this.configManager.removeConfigData();
-            console.log(`[${this.name}] 卸载完成`);
         } catch (error) {
             console.error(`[${this.name}] 卸载失败:`, error);
             throw error;
