@@ -25,7 +25,8 @@ export class SettingsFactory {
         const taskStore = useTaskStore();
         await taskStore.loadTasks();
       },
-      destroyCallback: () => {
+      destroyCallback: async () => {
+        await this.configManager.loadConfig();
         this.configManager.resetUnSavedConfig();
         this.destroyAllVueApps(); // 清理所有挂载的 Vue 应用
       },

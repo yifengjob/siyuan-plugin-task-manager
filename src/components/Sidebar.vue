@@ -348,38 +348,14 @@ onUnmounted(() => {
         <span>{{ i18n.loading ?? '加载中...' }}</span>
       </div>
       <div v-else-if="loadError" class="task-sidebar-error">
-        <svg
-          class="error-icon"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-        >
-          <path
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+        <svg class="error-icon">
+          <use xlink:href="#iconError"></use>
         </svg>
         <span>{{ loadError }}</span>
       </div>
       <div v-else-if="filteredTasks.length === 0" class="task-sidebar-empty">
-        <svg
-          class="empty-icon"
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-        >
-          <path
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+        <svg class="empty-icon">
+          <use xlink:href="#iconEmpty"></use>
         </svg>
         <span>{{ i18n.noTasks ?? '暂无任务' }}</span>
       </div>
@@ -609,14 +585,18 @@ onUnmounted(() => {
       animation: spin 0.8s linear infinite;
     }
 
-    .error-icon {
-      color: var(--b3-theme-danger);
+    .error-icon,
+    .empty-icon {
+      width: 36px;
+      height: 36px;
       opacity: 0.8;
     }
 
+    .error-icon {
+      color: var(--b3-theme-danger);
+    }
     .empty-icon {
-      color: var(--b3-theme-on-surface);
-      opacity: 0.5;
+      color: var(--b3-theme-on-background);
       margin-bottom: 8px;
     }
   }
