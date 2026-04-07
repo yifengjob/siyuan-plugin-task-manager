@@ -1,6 +1,6 @@
 import type { Task, TaskAttrs } from '@/types';
 import { defineStore } from 'pinia';
-import { taskService } from '@/services/TaskService.ts';
+import { taskService } from '@/services/TaskService';
 import { ref } from 'vue';
 
 export const useTaskStore = defineStore('tasks', () => {
@@ -14,42 +14,87 @@ export const useTaskStore = defineStore('tasks', () => {
     taskId: string,
     attrs: Partial<TaskAttrs>
   ) {
-    await taskService.setTaskAttrs(taskId, attrs);
-    // 更新本地数据
-    const task = tasks.value.find((t) => t.id === taskId);
-    if (task) {
-      Object.assign(task.attrs, attrs);
+    const taskIndex = tasks.value.findIndex((t) => t.id === taskId);
+    if (taskIndex === -1) return;
+
+    // 保存原始属性用于回滚
+    const originalAttrs = { ...tasks.value[taskIndex].attrs };
+
+    try {
+      // 乐观更新
+      tasks.value[taskIndex].attrs = {
+        ...tasks.value[taskIndex].attrs,
+        ...attrs,
+      };
+
+      // 同步到服务器
+      await taskService.setTaskAttrs(taskId, attrs);
+    } catch (error) {
+      // 失败时回滚
+      tasks.value[taskIndex].attrs = originalAttrs;
+      console.error('[TaskStore]任务属性更新失败：', error);
     }
   }
 
   async function toggleTaskStatus(taskId: string, completed: boolean) {
-    await taskService.setTaskStatus(taskId, completed);
-    await updateLocalTask(taskId, completed);
+    const taskIndex = tasks.value.findIndex((t) => t.id === taskId);
+    if (taskIndex === -1) return;
+
+    // 保存原始状态用于回滚
+    const originalCompleted = tasks.value[taskIndex].attrs.completed;
+    const originalActualDue = tasks.value[taskIndex].attrs.actualDue;
+    const originalMarkdown = tasks.value[taskIndex].markdown;
+
+    try {
+      // 乐观更新：立即更新 UI
+      tasks.value[taskIndex].attrs.completed = completed;
+
+      // 更新实际完成时间
+      const attrs = taskService.buildTaskCompletedAttrs(completed);
+      tasks.value[taskIndex].attrs.actualDue = attrs.actualDue || '';
+
+      // 更新 markdown 内容（checkbox 状态）
+      const markdown = tasks.value[taskIndex].markdown;
+      if (markdown) {
+        tasks.value[taskIndex].markdown = completed
+          ? markdown.replace(/^-\s*\[\s*]/, '- [X]')
+          : markdown.replace(/^-\s*\[X]/i, '- [ ]');
+      }
+
+      // 同步到服务器
+      await taskService.setTaskStatus(taskId, completed);
+    } catch (error) {
+      // 失败时回滚
+      tasks.value[taskIndex].attrs.completed = originalCompleted;
+      tasks.value[taskIndex].attrs.actualDue = originalActualDue;
+      tasks.value[taskIndex].markdown = originalMarkdown;
+      console.error('[TaskStore] 任务状态切换失败：', error);
+      throw error;
+    }
   }
 
   async function syncTaskStatus(taskId: string, completed: boolean) {
-    const attrs = taskService.buildTaskCompletedAttrs(completed);
-    await taskService.setTaskAttrs(taskId, attrs);
-    await updateLocalTask(taskId, attrs);
-  }
-  async function updateLocalTask(
-    taskId: string,
-    attrs: Partial<TaskAttrs> | boolean,
-    taskContent?: string
-  ) {
-    // 更新本地数据
-    const task = tasks.value.find((t) => t.id === taskId);
-    if (task) {
-      const updatedAttrs =
-        typeof attrs === 'boolean'
-          ? taskService.buildTaskCompletedAttrs(attrs)
-          : attrs;
+    const taskIndex = tasks.value.findIndex((t) => t.id === taskId);
+    if (taskIndex === -1) return;
 
-      task.attrs = {
-        ...task.attrs,
-        ...updatedAttrs,
+    // 保存原始状态用于回滚
+    const originalAttrs = { ...tasks.value[taskIndex].attrs };
+
+    try {
+      // 乐观更新：立即更新 UI
+      const attrs = taskService.buildTaskCompletedAttrs(completed);
+      tasks.value[taskIndex].attrs = {
+        ...tasks.value[taskIndex].attrs,
+        ...attrs,
       };
-      task.content = taskContent || task.content;
+
+      // 同步到服务器
+      await taskService.setTaskAttrs(taskId, attrs);
+    } catch (error) {
+      // 失败时回滚
+      tasks.value[taskIndex].attrs = originalAttrs;
+      console.error('[TaskStore] 任务状态同步失败：', error);
+      throw error;
     }
   }
 

@@ -7,7 +7,7 @@ import {
   NotebookConf,
   File,
   NotebookId,
-} from '@/types/index';
+} from '@/types/index.ts';
 
 export enum DataType {
   markdown = 'markdown',

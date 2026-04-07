@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { apiService } from '@/services/ApiService';
-import type { PluginConfigManager } from '@/utils/PluginConfigManager';
+import type { PluginConfigManager } from '@/utils';
 import type { I18n } from '@/types';
 import {
   findNode,
@@ -11,7 +11,7 @@ import {
   type TreeNodeBase,
   updateAncestorsState,
   updateIndeterminateState,
-} from '@/utils/treeUtils';
+} from '@/utils/TreeUtils.ts';
 
 const props = defineProps<{
   configManager: PluginConfigManager;

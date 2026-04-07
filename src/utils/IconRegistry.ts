@@ -1,4 +1,4 @@
-import TaskManagerPlugin from '@/index.ts';
+import TaskManagerPlugin from '@/main';
 import iconTaskActualDue from '@/assets/icons/task-actual-due.svg?raw';
 import iconTaskBoard from '@/assets/icons/task-board.svg?raw';
 import iconTaskCreated from '@/assets/icons/task-created.svg?raw';

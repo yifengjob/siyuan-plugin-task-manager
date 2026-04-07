@@ -3,19 +3,21 @@ import { App, createApp, onMounted, onUnmounted, ref } from 'vue';
 import Sidebar from '@/components/Sidebar.vue';
 import TaskPopover from '@/components/TaskPopover.vue';
 import { useTaskStore } from '@/stores/tasks.store.ts';
-import { usePlugin } from '@/utils/pluginInstance';
+import { usePlugin, IconRegistry } from '@/utils';
 import { PopoverOptions, TaskAttrs } from '@/types';
-import { IconRegistry } from '@/utils/IconRegistry.ts';
 
 const plugin = usePlugin();
 let dockApp: App<Element> | null = null;
 const taskStore = useTaskStore();
-const popoverOptions = ref(null);
+const popoverOptions = ref<PopoverOptions | null>(null);
 
 const handlePopoverSave = async (attrs: Partial<TaskAttrs>) => {
   if (popoverOptions.value?.taskId) {
     await taskStore.updateTaskAttributes(popoverOptions.value.taskId, attrs);
-    if (popoverOptions.value.completed !== attrs.completed) {
+    if (
+      attrs.completed !== undefined &&
+      popoverOptions.value.attrs?.completed !== attrs.completed
+    ) {
       await taskStore.toggleTaskStatus(
         popoverOptions.value.taskId,
         attrs.completed

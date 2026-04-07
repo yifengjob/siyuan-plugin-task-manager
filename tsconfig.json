@@ -2,13 +2,8 @@
   "compilerOptions": {
     "target": "ESNext",
     "jsx": "preserve",
-    "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "useDefineForClassFields": true,
-    "baseUrl": ".",
     "module": "ESNext",
     /* Bundler mode */
     "moduleResolution": "Bundler",
@@ -17,15 +12,17 @@
       "@/libs/*": ["./src/libs/*"]
     },
     "resolveJsonModule": true,
-    "types": [
-      "node",
-      "vite/client"
-    ],
     "allowImportingTsExtensions": true,
     "allowJs": true,
-    "checkJs": true,
     /* Linting */
-    "strict": false,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -41,15 +38,6 @@
       "path": "./tsconfig.node.json"
     }
   ],
-  "include": [
-    "tools/**/*.ts",
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.vue"
-  ],
-  "exclude": [
-    "node_modules",
-    "src/abandon"
-  ],
-  "root": "."
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue"],
+  "exclude": ["node_modules", "src/abandon"]
 }

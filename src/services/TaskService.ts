@@ -1,8 +1,13 @@
-import { apiService, ApiService } from '@/services/ApiService.ts';
-import { BlockId, BlockInfo, Task, TaskAttrs } from '@/types';
-import { DataType } from '@/types/api.ts';
-import { TaskAttribute } from '@/types/task.ts';
-import { usePlugin } from '@/utils/pluginInstance.ts';
+import { apiService, ApiService } from '@/services/ApiService';
+import {
+  BlockId,
+  BlockInfo,
+  Task,
+  TaskAttrs,
+  DataType,
+  TaskAttribute,
+} from '@/types';
+import { usePlugin } from '@/utils';
 
 export class TaskService {
   constructor(private api: ApiService) {}
@@ -203,9 +208,7 @@ export class TaskService {
 
       const markdown = await this.getTaskMarkdown(blockId);
       if (!markdown) {
-        console.warn(
-          `[TaskService] Failed to get markdown for task ${blockId}`
-        );
+        console.warn(`[TaskService] 获取任务markdown失败 ${blockId}`);
         return;
       }
 
@@ -228,7 +231,7 @@ export class TaskService {
       originalAttrs[TaskAttribute.completed] = completeAttrs.completed
         ? 'true'
         : '';
-      originalAttrs[TaskAttribute.actualDue] = completeAttrs.actualDue;
+      originalAttrs[TaskAttribute.actualDue] = completeAttrs.actualDue || '';
 
       await this.api.setBlockAttrs(blockId, originalAttrs);
     } catch (error) {

@@ -1,6 +1,6 @@
 # Task Manager
 
-<div align="center">
+<div style="text-align: center;">
 
 ![License](https://img.shields.io/github/license/yifengjob/siyuan-plugin-task-manager)
 ![Version](https://img.shields.io/github/v/release/yifengjob/siyuan-plugin-task-manager)
@@ -151,7 +151,7 @@ siyuan-plugin-task-manager/
 │ ├── utils/ # Utilities 
 │ ├── assets/ # Static Assets 
 │ ├── i18n/ # Internationalization 
-│ └── index.ts # Entry Point 
+│ └── main.ts # Entry Point 
 ├── plugin.json # Plugin Configuration 
 └── vite.config.ts # Build Configuration
 
@@ -204,12 +204,12 @@ This project is open-sourced under the AGPL-3.0 license.
 
 ---
 
-<div align="center">
+<div style="text-align: center;">
 
 **If you find this useful, please give us a ⭐ Star! If you're feeling generous, please scan the QR code below to
 support me.**
 
 
-<img src="https://cdn.jsdelivr.net/gh/yifengjob/siyuan-plugin-concat-subdocs/wechat-reward.png"  onerror="this.onerror=null;this.src='./wechat-reward.png';" alt="WeChat Reward Code" width="300" align="center" style="height: auto;box-shadow: 0px 0px 5px #aaaaaa;">
+<img src="https://cdn.jsdelivr.net/gh/yifengjob/siyuan-plugin-concat-subdocs/wechat-reward.png"  alt="WeChat Reward Code" style="height: auto;box-shadow: 0 0 2px #aaaaaa; max-width: 300px;">
 
 </div>

@@ -106,7 +106,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       sourcemap: false,
       minify: isWatch ? false : 'oxc',
       lib: {
-        entry: resolve(__dirname, 'src/index.ts'),
+        entry: resolve(__dirname, 'src/main.ts'),
         fileName: 'index',
         formats: ['cjs'],
       },
@@ -117,7 +117,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
             : [
                 zipPack({
                   inDir: './dist',
-                  outDir: './',
+                  outDir: './build',
                   outFileName: 'package.zip',
                 }),
                 removeConsole({
@@ -128,16 +128,17 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         external: ['siyuan', 'process'],
         treeshake: true,
         output: {
-          entryFileNames: '[name].js',
+          // entryFileNames: '[name].js',
+          entryFileNames: 'index.js',
           assetFileNames: (assetInfo) => {
             const assetName =
               Array.isArray(assetInfo.names) && assetInfo.names.length > 0
                 ? assetInfo.names[0]
-                : 'unknown';
-            if (assetName === 'style.css') {
+                : undefined;
+            if (assetName?.endsWith('.css')) {
               return 'index.css';
             }
-            if (!assetName || assetName === 'unknown') {
+            if (!assetName) {
               return 'assets/[name].[ext]';
             }
             return assetName;

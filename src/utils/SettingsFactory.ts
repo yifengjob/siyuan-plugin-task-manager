@@ -4,10 +4,10 @@ import { PluginConfigManager } from './PluginConfigManager';
 import { I18n, PluginConfig, RadioGroupOption } from '@/types';
 import { createApp, App } from 'vue';
 import DocTreeSelector from '@/components/DocTreeSelector.vue';
-import { useTaskStore } from '@/stores/tasks.store.ts';
+import { useTaskStore } from '@/stores/tasks.store';
 
 export class SettingsFactory {
-  private setting: Setting;
+  private setting!: Setting;
   private readonly configManager: PluginConfigManager;
   private readonly i18n: I18n;
   private vueApps: Map<HTMLElement, App> = new Map(); // 存储容器与应用的映射

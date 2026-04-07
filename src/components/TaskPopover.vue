@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PopoverOptions, TaskAttrs } from '@/types';
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
-import { usePlugin } from '@/utils/pluginInstance';
+import { usePlugin } from '@/utils';
 import {
   computePosition,
   autoUpdate,
@@ -12,7 +12,7 @@ import {
   type Placement,
 } from '@floating-ui/dom';
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
-import { formatDate } from '@/utils/dateTimeUtils.ts';
+import { formatDate } from '@/utils/DateTimeUtils.ts';
 import { useConfigStore } from '@/stores/config.store.ts';
 
 // ============ Props & Emits ============
@@ -69,15 +69,14 @@ const createdStr = computed(() => {
 
 // ============ Form Methods ============
 const updateForm = () => {
-  if (props.options) {
-    form.value = {
-      start: props.options.attrs.start || '',
-      planDue: props.options.attrs.planDue || '',
-      actualDue: props.options.attrs.actualDue || '',
-      priority: props.options.attrs.priority || 'normal',
-      notes: props.options.attrs.notes || '',
-    };
-  }
+  const attrs = props.options?.attrs;
+  form.value = {
+    start: attrs?.start ?? '',
+    planDue: attrs?.planDue ?? '',
+    actualDue: attrs?.actualDue ?? '',
+    priority: attrs?.priority ?? 'normal',
+    notes: attrs?.notes ?? '',
+  };
 };
 
 const handleSave = () => {
@@ -98,7 +97,7 @@ const handleCancel = () => {
 
 // ============ Floating UI 位置更新 ============
 const updatePosition = () => {
-  if (!containerRef.value) return;
+  if (!containerRef.value || !arrowRef.value) return;
 
   // 确定参考元素：优先使用 referencePoint 创建的虚拟参考，否则使用实际 DOM 元素
   let reference = referenceElement;
@@ -125,10 +124,12 @@ const updatePosition = () => {
       arrowMiddleware({ element: arrowRef.value, padding: 4 }),
     ],
   }).then(({ x, y, placement: newPlacement, middlewareData }) => {
-    Object.assign(containerRef.value?.style, {
-      left: `${x}px`,
-      top: `${y}px`,
-    });
+    if (containerRef.value) {
+      Object.assign(containerRef.value.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+      });
+    }
     placement.value = newPlacement;
     containerRef.value?.setAttribute('data-placement', newPlacement);
 
@@ -376,6 +377,28 @@ const unbindScrollEvents = () => {
 };
 
 // ============ Show & Close ============
+// 使用标志位防止重复绑定
+let isListenersBound = false;
+
+const bindEventListeners = () => {
+  if (isListenersBound) return;
+
+  document.addEventListener('click', onDocumentClick);
+  document.addEventListener('keydown', onKeydown, { capture: true });
+  bindScrollEvents();
+  window.addEventListener('resize', onResize);
+  isListenersBound = true;
+};
+
+const unbindEventListeners = () => {
+  if (!isListenersBound) return;
+
+  document.removeEventListener('click', onDocumentClick);
+  document.removeEventListener('keydown', onKeydown, { capture: true });
+  unbindScrollEvents();
+  window.removeEventListener('resize', onResize);
+  isListenersBound = false;
+};
 const show = () => {
   if (!props.options) return;
   const blockId = props.options.taskId;
@@ -412,10 +435,7 @@ const show = () => {
     }, plugin.getConfig().autoHidePopoverDelay * 1000);
   }
 
-  document.addEventListener('click', onDocumentClick);
-  document.addEventListener('keydown', onKeydown, { capture: true });
-  bindScrollEvents();
-  window.addEventListener('resize', onResize);
+  bindEventListeners();
 };
 
 const close = (skipEmit = false) => {
@@ -438,10 +458,7 @@ const close = (skipEmit = false) => {
   focusCount = 0;
   currentBlockId.value = undefined;
 
-  document.removeEventListener('click', onDocumentClick);
-  document.removeEventListener('keydown', onKeydown, { capture: true });
-  window.removeEventListener('resize', onResize);
-  unbindScrollEvents();
+  unbindEventListeners();
   stopAutoUpdate();
 };
 

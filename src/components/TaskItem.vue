@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { Task } from '@/types';
 import { computed } from 'vue';
-import { usePlugin } from '@/utils/pluginInstance.ts';
-import { formatDate } from '@/utils/dateTimeUtils.ts';
-import { useConfigStore } from '@/stores/config.store.ts';
+import { usePlugin, formatDate } from '@/utils';
+import { useConfigStore } from '@/stores/config.store';
 
 const props = defineProps<{ task: Task }>();
 const emit = defineEmits<{

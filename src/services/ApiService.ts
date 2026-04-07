@@ -9,8 +9,6 @@ import {
   NotebookId,
   ParentID,
   PreviousID,
-} from '@/types';
-import {
   DataType,
   IResBootProgress,
   IResdoOperations,
@@ -26,7 +24,7 @@ import {
   IResReadDir,
   IResUpload,
   PandocArgs,
-} from '@/types/api.ts';
+} from '@/types';
 
 export class ApiService {
   /**
@@ -35,9 +33,6 @@ export class ApiService {
    * @returns 转义后的字符串
    */
   private escapeSql(str: string): string {
-    if (typeof str !== 'string') {
-      return str;
-    }
     // SQLite 特殊字符转义
     return str
       .replace(/'/g, "''") // 单引号转双单引号
@@ -45,7 +40,10 @@ export class ApiService {
       .replace(/\\/g, '\\\\') // 反斜杠转双反斜杠
       .replace(/\0/g, '\\0'); // 空字符转义
   }
-  async request(url: string, data: any) {
+  async request(
+    url: string,
+    data: string | Record<string, unknown> | FormData
+  ) {
     const response: IWebSocketData = await fetchSyncPost(url, data);
     return response.code === 0 ? response.data : null;
   }
@@ -55,7 +53,7 @@ export class ApiService {
     await fetchSyncPost(url, '');
   }
 
-  // **************************************** Noteboook ****************************************
+  // **************************************** Notebook ****************************************
   async lsNotebooks(): Promise<IReslsNotebooks> {
     const url = '/api/notebook/lsNotebooks';
     return this.request(url, '');
@@ -513,8 +511,8 @@ export class ApiService {
   async forwardProxy(
     url: string,
     method: string = 'GET',
-    payload: any = {},
-    headers: any[] = [],
+    payload: Record<string, unknown> = {},
+    headers: Record<string, string>[] = [],
     timeout: number = 7000,
     contentType: string = 'text/html'
   ): Promise<IResForwardProxy> {

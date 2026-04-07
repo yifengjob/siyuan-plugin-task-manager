@@ -23,7 +23,7 @@ export class PluginConfigManager {
     if (saved) {
       const mergedConfig = {
         defaultProgressGroup: 'incomplete',
-        autoHidePopoverDelay: 3,
+        autoHidePopoverDelay: 5,
         filteredNotebooks: [],
         filteredBlocks: [],
         datetimeFormatPattern: 'yyyy-MM-dd HH:mm',
@@ -36,10 +36,9 @@ export class PluginConfigManager {
   async saveConfig(): Promise<void> {
     const configToSave =
       this.unSavedConfig || this.getConfigStore().getConfig();
-    this.plugin.saveData('config.json', configToSave).then(() => {
-      this.getConfigStore().setConfig(configToSave);
-      this.unSavedConfig = null;
-    });
+    await this.plugin.saveData('config.json', configToSave);
+    this.getConfigStore().setConfig(configToSave);
+    this.unSavedConfig = null;
   }
 
   async removeConfigData(): Promise<void> {

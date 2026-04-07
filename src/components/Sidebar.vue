@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { Task } from '@/types';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { taskService } from '@/services/TaskService.ts';
-import { useTaskStore } from '@/stores/tasks.store.ts';
-import { usePlugin } from '@/utils/pluginInstance.ts';
+import { taskService } from '@/services/TaskService';
+import { useTaskStore } from '@/stores/tasks.store';
+import { usePlugin } from '@/utils';
 import TaskItem from './TaskItem.vue';
 import type { IWebSocketData } from 'siyuan';
 import {
