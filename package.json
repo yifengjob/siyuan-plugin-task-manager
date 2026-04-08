@@ -2,10 +2,10 @@
   "name": "siyuan-plugin-task-manager",
   "version": "11.0.0",
   "type": "module",
-  "description": "",
-  "author": "",
+  "description": "Task Manager is a plugin for Siyuan Notes, designed to centrally manage tasks scattered throughout your entire workspace. It helps you easily track and manage to-do items by adding rich metadata to each task, multiplying your work efficiency.",
+  "author": "YiFeng",
   "license": "AGPL-3.0",
-  "homepage": "",
+  "homepage": "https://github.com/yifengjob/siyuan-plugin-task-manager#readme",
   "repository": "https://github.com/yifengjob/siyuan-plugin-task-manager",
   "scripts": {
     "dev": "vite build --watch",

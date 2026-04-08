@@ -1,0 +1,115 @@
+import { onUnmounted } from 'vue';
+import {
+  computePosition,
+  autoUpdate,
+  offset,
+  shift,
+  flip,
+  arrow as arrowMiddleware,
+} from '@floating-ui/dom';
+
+/**
+ * Tooltip 功能 Composable
+ * 管理悬浮提示的显示和定位
+ */
+export function useTooltip() {
+  let tooltipElement: HTMLDivElement | null = null;
+  let cleanupAutoUpdate: (() => void) | null = null;
+
+  /**
+   * 创建 Tooltip
+   */
+  const createTooltip = (reference: HTMLElement, content: string) => {
+    destroyTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'task-sidebar-tooltip';
+    tooltip.textContent = content;
+    document.body.appendChild(tooltip);
+
+    const arrow = document.createElement('div');
+    arrow.className = 'task-sidebar-tooltip-arrow';
+    tooltip.appendChild(arrow);
+
+    tooltipElement = tooltip;
+
+    cleanupAutoUpdate = autoUpdate(
+      reference,
+      tooltip,
+      () => {
+        computePosition(reference, tooltip, {
+          placement: 'left',
+          middleware: [
+            offset(8),
+            flip(),
+            shift({ padding: 8 }),
+            arrowMiddleware({ element: arrow, padding: 4 }),
+          ],
+        }).then(({ x, y, placement, middlewareData }) => {
+          Object.assign(tooltip.style, {
+            left: `${x}px`,
+            top: `${y}px`,
+          });
+
+          if (middlewareData.arrow) {
+            const { x: arrowX, y: arrowY } = middlewareData.arrow;
+            const staticSide = {
+              top: 'bottom',
+              right: 'left',
+              bottom: 'top',
+              left: 'right',
+            }[placement.split('-')[0]];
+            Object.assign(arrow.style, {
+              left: arrowX !== null ? `${arrowX}px` : '',
+              top: arrowY !== null ? `${arrowY}px` : '',
+              right: '',
+              bottom: '',
+              [staticSide ?? '']: '-4px',
+            });
+          }
+        });
+      },
+      { animationFrame: true }
+    );
+  };
+
+  /**
+   * 销毁 Tooltip
+   */
+  const destroyTooltip = () => {
+    if (cleanupAutoUpdate) {
+      cleanupAutoUpdate();
+      cleanupAutoUpdate = null;
+    }
+    if (tooltipElement) {
+      tooltipElement.remove();
+      tooltipElement = null;
+    }
+  };
+
+  /**
+   * 鼠标进入事件处理
+   */
+  const onMouseEnter = (event: MouseEvent, content: string) => {
+    const target = event.currentTarget as HTMLElement;
+    createTooltip(target, content);
+  };
+
+  /**
+   * 鼠标离开事件处理
+   */
+  const onMouseLeave = () => {
+    destroyTooltip();
+  };
+
+  // 清理
+  onUnmounted(() => {
+    destroyTooltip();
+  });
+
+  return {
+    onMouseEnter,
+    onMouseLeave,
+    destroyTooltip,
+  };
+}

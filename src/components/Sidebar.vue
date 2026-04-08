@@ -1,317 +1,79 @@
 <script setup lang="ts">
 import type { Task } from '@/types';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { taskService } from '@/services/TaskService';
-import { useTaskStore } from '@/stores/tasks.store';
 import { usePlugin } from '@/utils';
+import { handleError } from '@/utils/ErrorHandler';
+import { useTaskStore } from '@/stores/tasks.store';
 import TaskItem from './TaskItem.vue';
-import type { IWebSocketData } from 'siyuan';
-import {
-  computePosition,
-  autoUpdate,
-  offset,
-  shift,
-  flip,
-  arrow as arrowMiddleware,
-} from '@floating-ui/dom';
+import ErrorBoundary from './ErrorBoundary.vue';
+import { useTaskFilter } from '@/composables/useTaskFilter';
+import { useTaskSync } from '@/composables/useTaskSync';
+import { useTooltip } from '@/composables/useTooltip';
+import { useVirtualScroll } from '@/composables/useVirtualScroll';
+import { computed } from 'vue';
 
-const taskStore = useTaskStore();
 const plugin = usePlugin();
 const i18n = plugin.i18n;
-const isLoading = ref(true);
-const loadError = ref<string | null>(null);
-let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-const processedBlockIds = new Map<string, number>();
-const THROTTLE_DELAY = 50;
-const DEBOUNCED_DELAY = 50;
-const MAX_CACHED_BLOCK_IDS = 1000;
-const CACHE_EXPIRY_TIME = 5 * 60 * 1000;
+const taskStore = useTaskStore();
 
-const filterStatus = ref<'all' | 'completed' | 'incomplete' | string>(
-  plugin.getConfig().defaultProgressGroup
-);
+// 使用 composables
+const {
+  filterStatus,
+  filteredTasks,
+  groups,
+  totalTasks,
+  completedTasks,
+  incompleteTasks,
+  searchQuery,
+  setSearchQuery,
+  clearSearch,
+  hasActiveSearch,
+  searchResultCount,
+} = useTaskFilter();
 
-const allTasks = computed(() => taskStore.tasks);
+const { isLoading, loadError, handleRefresh } = useTaskSync();
 
-const filteredTasks = computed(() => {
-  if (filterStatus.value === 'all') return allTasks.value;
-  if (filterStatus.value === 'completed') {
-    return allTasks.value.filter((task) => task.attrs.completed === true);
-  }
-  return allTasks.value.filter((task) => task.attrs.completed !== true);
+const { onMouseEnter: onTitleMouseEnter, onMouseLeave: onTitleMouseLeave } =
+  useTooltip();
+
+// 扁平化任务列表用于虚拟滚动
+const allTasksList = computed(() => {
+  return groups.value.flatMap((group) => group.tasks);
 });
 
-const cleanupExpiredCache = () => {
-  const now = Date.now();
-  for (const [blockId, timestamp] of processedBlockIds.entries()) {
-    if (now - timestamp > CACHE_EXPIRY_TIME) {
-      processedBlockIds.delete(blockId);
-    }
-  }
-};
+// 使用虚拟滚动
+const {
+  containerRef: virtualContainerRef,
+  isEnabled: isVirtualScrollEnabled,
+  visibleItems: visibleTasks,
+  offsetY,
+  totalHeight,
+} = useVirtualScroll(allTasksList);
 
-const groups = computed(() => {
-  const map = new Map<
-    string,
-    { rootTitle: string; rootPath: string; boxTitle: string; tasks: Task[] }
-  >();
-  filteredTasks.value.forEach((task) => {
-    const rootId = task.rootId;
-    if (!map.has(rootId)) {
-      map.set(rootId, {
-        rootTitle:
-          task.rootTitle !== '' ? task.rootTitle : plugin.i18n.untitled,
-        rootPath: task.hpath,
-        boxTitle: task.boxTitle !== '' ? task.boxTitle : plugin.i18n.untitled,
-        tasks: [],
-      });
-    }
-    map.get(rootId)?.tasks.push(task);
-  });
-  return Array.from(map.entries()).map(([rootId, data]) => ({
-    rootId,
-    ...data,
-  }));
-});
-
-const totalTasks = computed(() => allTasks.value.length);
-const completedTasks = computed(
-  () => allTasks.value.filter((t) => t.attrs.completed === true).length
-);
-const incompleteTasks = computed(() => totalTasks.value - completedTasks.value);
-
+/**
+ * 任务点击处理
+ */
 const onTaskClick = async (task: Task) => {
   const id = task.id;
   if (id) {
     try {
       await taskService.openTask(id);
     } catch (error) {
-      console.error('[TaskManager] 未打开任务：', error);
+      handleError(error, { action: 'openTask', taskId: id });
     }
   }
 };
 
+/**
+ * 切换任务完成状态
+ */
 const toggleCompleted = async (taskId: string, completed: boolean) => {
   try {
     await taskStore.toggleTaskStatus(taskId, completed);
   } catch (error) {
-    console.error('[TaskManager] 未能切换任务完成：', error);
+    handleError(error, { action: 'toggleTask', taskId });
   }
 };
-
-const handleRefresh = async () => {
-  try {
-    isLoading.value = true;
-    loadError.value = null;
-    await taskStore.loadTasks();
-  } catch (error) {
-    console.error('手动刷新失败：', error);
-    loadError.value = '刷新失败，请稍后重试';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const debouncedRefresh = async () => {
-  if (refreshTimer) {
-    clearTimeout(refreshTimer);
-  }
-  return new Promise<void>((resolve, reject) => {
-    refreshTimer = setTimeout(async () => {
-      try {
-        loadError.value = null;
-        await taskStore.loadTasks();
-        resolve();
-      } catch (error) {
-        console.error('任务刷新失败：', error);
-        loadError.value = '刷新失败，请稍后重试';
-        reject(error);
-      } finally {
-        refreshTimer = null;
-      }
-    }, DEBOUNCED_DELAY);
-  });
-};
-
-const handleWsMain = async (event: CustomEvent<IWebSocketData>) => {
-  const detail = event.detail;
-  if (!detail) return;
-
-  const supportedCommands = [
-    'removeDoc',
-    'create',
-    'moveDoc',
-    'rename',
-    'copyDoc',
-  ];
-  if (detail.cmd && supportedCommands.includes(detail.cmd)) {
-    await debouncedRefresh();
-    return;
-  }
-
-  if (detail.cmd && detail.cmd !== 'transactions') {
-    return;
-  }
-  if (!detail.data || !Array.isArray(detail.data)) return;
-  let needsRefresh = false;
-  const supportedActions = ['update', 'delete', 'insert', 'move', 'save'];
-
-  try {
-    for (const item of detail.data) {
-      if (!item.doOperations || !Array.isArray(item.doOperations)) continue;
-
-      for (const op of item.doOperations) {
-        if (!op.action || !supportedActions.includes(op.action)) continue;
-
-        if (
-          op.action === 'update' &&
-          op.data &&
-          op.data.startsWith(
-            '<div data-marker="*" data-subtype="t" data-node-id="'
-          ) &&
-          op.data.includes('data-subtype="t"') &&
-          op.data.includes('data-type="NodeListItem"')
-        ) {
-          const blockId = op.id;
-          if (!blockId) continue;
-
-          const now = Date.now();
-          const lastProcessedTime = processedBlockIds.get(blockId) || 0;
-          if (now - lastProcessedTime < THROTTLE_DELAY) {
-            continue;
-          }
-          const taskCompleted = op.data.includes(
-            `class="li protyle-task--done"`
-          );
-
-          processedBlockIds.set(blockId, now);
-          if (processedBlockIds.size > MAX_CACHED_BLOCK_IDS) {
-            const firstKey = processedBlockIds.keys().next().value;
-            if (firstKey) processedBlockIds.delete(firstKey);
-          }
-          if (processedBlockIds.size % 100 === 0) {
-            cleanupExpiredCache();
-          }
-
-          await taskStore.syncTaskStatus(blockId, taskCompleted);
-          continue;
-        }
-
-        needsRefresh = true;
-      }
-    }
-
-    if (needsRefresh) {
-      await debouncedRefresh().catch((error) => {
-        console.error('[TaskManager] 防抖刷新失败：', error);
-      });
-    }
-  } catch (error) {
-    console.error('[TaskManager] handleWsMain 错误：', error);
-  }
-};
-
-// ============ Tooltip 功能 ==========
-let tooltipElement: HTMLDivElement | null = null;
-let cleanupAutoUpdate: (() => void) | null = null;
-
-const createTooltip = (reference: HTMLElement, content: string) => {
-  destroyTooltip();
-
-  const tooltip = document.createElement('div');
-  tooltip.className = 'task-sidebar-tooltip';
-  tooltip.textContent = content;
-  document.body.appendChild(tooltip);
-
-  const arrow = document.createElement('div');
-  arrow.className = 'task-sidebar-tooltip-arrow';
-  tooltip.appendChild(arrow);
-
-  tooltipElement = tooltip;
-
-  cleanupAutoUpdate = autoUpdate(
-    reference,
-    tooltip,
-    () => {
-      computePosition(reference, tooltip, {
-        placement: 'left',
-        middleware: [
-          offset(8),
-          flip(),
-          shift({ padding: 8 }),
-          arrowMiddleware({ element: arrow, padding: 4 }),
-        ],
-      }).then(({ x, y, placement, middlewareData }) => {
-        Object.assign(tooltip.style, {
-          left: `${x}px`,
-          top: `${y}px`,
-        });
-
-        if (middlewareData.arrow) {
-          const { x: arrowX, y: arrowY } = middlewareData.arrow;
-          const staticSide = {
-            top: 'bottom',
-            right: 'left',
-            bottom: 'top',
-            left: 'right',
-          }[placement.split('-')[0]];
-          Object.assign(arrow.style, {
-            left: arrowX !== null ? `${arrowX}px` : '',
-            top: arrowY !== null ? `${arrowY}px` : '',
-            right: '',
-            bottom: '',
-            [staticSide ?? '']: '-4px',
-          });
-        }
-      });
-    },
-    { animationFrame: true }
-  );
-};
-
-const destroyTooltip = () => {
-  if (cleanupAutoUpdate) {
-    cleanupAutoUpdate();
-    cleanupAutoUpdate = null;
-  }
-  if (tooltipElement) {
-    tooltipElement.remove();
-    tooltipElement = null;
-  }
-};
-
-const onTitleMouseEnter = (event: MouseEvent, path: string) => {
-  const target = event.currentTarget as HTMLElement;
-  createTooltip(target, path);
-};
-
-const onTitleMouseLeave = () => {
-  destroyTooltip();
-};
-
-onMounted(async () => {
-  try {
-    isLoading.value = true;
-    loadError.value = null;
-    await taskStore.loadTasks();
-  } catch (error) {
-    console.error('✗ Failed to load tasks:', error);
-    loadError.value = '加载任务失败，请刷新重试';
-  } finally {
-    isLoading.value = false;
-  }
-  plugin.eventBus.on('ws-main', handleWsMain);
-});
-
-onUnmounted(() => {
-  plugin.eventBus.off('ws-main', handleWsMain);
-  if (refreshTimer) {
-    clearTimeout(refreshTimer);
-    refreshTimer = null;
-  }
-  processedBlockIds.clear();
-  destroyTooltip();
-});
 </script>
 
 <template>
@@ -341,46 +103,113 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <!-- 内容区域 -->
-    <div class="task-sidebar-content">
-      <div v-if="isLoading" class="task-sidebar-loading">
-        <div class="loading-spinner"></div>
-        <span>{{ i18n.loading ?? '加载中...' }}</span>
-      </div>
-      <div v-else-if="loadError" class="task-sidebar-error">
-        <svg class="error-icon">
-          <use xlink:href="#iconError"></use>
+    <!-- 搜索栏 -->
+    <div v-if="totalTasks > 0" class="task-search-bar">
+      <div class="task-search-input-wrapper">
+        <svg class="search-icon">
+          <use xlink:href="#iconSearch"></use>
         </svg>
-        <span>{{ loadError }}</span>
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="task-search-input"
+          :placeholder="i18n.search ?? '搜索任务...'"
+          @input="(e) => setSearchQuery((e.target as HTMLInputElement).value)"
+        />
+        <button
+          v-if="hasActiveSearch"
+          class="search-clear-btn"
+          title="清除搜索"
+          @click="clearSearch"
+        >
+          <svg class="icon"><use xlink:href="#iconClose"></use></svg>
+        </button>
       </div>
-      <div v-else-if="filteredTasks.length === 0" class="task-sidebar-empty">
-        <svg class="empty-icon">
-          <use xlink:href="#iconEmpty"></use>
-        </svg>
-        <span>{{ i18n.noTasks ?? '暂无任务' }}</span>
-      </div>
-      <div v-else>
-        <div v-for="group in groups" :key="group.rootId" class="task-doc-group">
-          <div
-            class="task-doc-title"
-            @mouseenter="
-              onTitleMouseEnter($event, '/' + group.boxTitle + group.rootPath)
-            "
-            @mouseleave="onTitleMouseLeave"
-          >
-            <span class="task-doc-title-text">{{ group.rootTitle }}</span>
-            <span class="task-doc-count">{{ group.tasks.length }}</span>
-          </div>
-          <TaskItem
-            v-for="task in group.tasks"
-            :key="task.id"
-            :task="task"
-            @click="onTaskClick"
-            @toggle-completed="toggleCompleted"
-          />
-        </div>
+      <div v-if="hasActiveSearch" class="search-result-count">
+        找到 {{ searchResultCount }} 个结果
       </div>
     </div>
+
+    <!-- 内容区域 -->
+    <ErrorBoundary name="SidebarContent">
+      <div
+        ref="virtualContainerRef"
+        class="task-sidebar-content"
+        :class="{ 'virtual-scroll-enabled': isVirtualScrollEnabled }"
+      >
+        <div v-if="isLoading" class="task-sidebar-loading">
+          <div class="loading-spinner"></div>
+          <span>{{ i18n.loading ?? '加载中...' }}</span>
+        </div>
+        <div v-else-if="loadError" class="task-sidebar-error">
+          <svg class="error-icon">
+            <use xlink:href="#iconError"></use>
+          </svg>
+          <span>{{ loadError }}</span>
+        </div>
+        <div v-else-if="filteredTasks.length === 0" class="task-sidebar-empty">
+          <svg class="empty-icon">
+            <use xlink:href="#iconEmpty"></use>
+          </svg>
+          <span v-if="hasActiveSearch">{{
+            i18n.noSearchResults ?? '未找到匹配的任务'
+          }}</span>
+          <span v-else>{{ i18n.noTasks ?? '暂无任务' }}</span>
+        </div>
+        <div v-else>
+          <!-- 虚拟滚动模式 -->
+          <div
+            v-if="isVirtualScrollEnabled"
+            class="virtual-scroll-container"
+            :style="{ height: totalHeight + 'px', position: 'relative' }"
+          >
+            <div
+              class="virtual-scroll-spacer"
+              :style="{ transform: `translateY(${offsetY}px)` }"
+            >
+              <TaskItem
+                v-for="task in visibleTasks"
+                :key="task.id"
+                :task="task"
+                @click="onTaskClick"
+                @toggle-completed="toggleCompleted"
+              />
+            </div>
+          </div>
+          <!-- 普通模式 -->
+          <div v-else>
+            <div
+              v-for="group in groups"
+              :key="group.rootId"
+              class="task-doc-group"
+            >
+              <ErrorBoundary :name="`Group-${group.rootId}`">
+                <div
+                  class="task-doc-title"
+                  @mouseenter="
+                    onTitleMouseEnter(
+                      $event,
+                      '/' + group.boxTitle + group.rootPath
+                    )
+                  "
+                  @mouseleave="onTitleMouseLeave"
+                >
+                  <span class="task-doc-title-text">{{ group.rootTitle }}</span>
+                  <span class="task-doc-count">{{ group.tasks.length }}</span>
+                </div>
+                <TaskItem
+                  v-for="task in group.tasks"
+                  :key="task.id"
+                  :task="task"
+                  @click="onTaskClick"
+                  @toggle-completed="toggleCompleted"
+                />
+              </ErrorBoundary>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ErrorBoundary>
 
     <!-- 底部状态栏 -->
     <div class="task-sidebar-footer">
@@ -432,6 +261,85 @@ onUnmounted(() => {
     padding: 4px;
     border: 1px solid var(--b3-border-color);
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  // 搜索栏样式
+  .task-search-bar {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    background: var(--b3-theme-surface-light);
+    border-bottom: 1px solid var(--b3-border-color);
+
+    .task-search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: var(--b3-theme-background);
+      border: 1px solid var(--b3-border-color);
+      border-radius: 8px;
+      padding: 6px 10px;
+      transition: all 0.2s ease;
+
+      &:focus-within {
+        border-color: var(--b3-theme-primary);
+        box-shadow: 0 0 0 2px rgba(var(--b3-theme-primary-rgb), 0.1);
+      }
+
+      .search-icon {
+        width: 16px;
+        height: 16px;
+        fill: var(--b3-theme-on-surface);
+        margin-right: 8px;
+        flex-shrink: 0;
+      }
+
+      .task-search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 13px;
+        color: var(--b3-theme-on-background);
+        font-family: inherit;
+
+        &::placeholder {
+          color: var(--b3-theme-on-surface);
+          opacity: 0.6;
+        }
+      }
+
+      .search-clear-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+        color: var(--b3-theme-on-surface);
+        transition: all 0.2s ease;
+
+        .icon {
+          width: var(--b3-font-size);
+          height: var(--b3-font-size);
+          fill: currentColor;
+        }
+
+        &:hover {
+          background: var(--b3-theme-surface);
+          color: var(--b3-theme-error);
+        }
+      }
+    }
+
+    .search-result-count {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--b3-theme-primary);
+      text-align: right;
+      font-weight: 500;
+    }
   }
 
   .task-filter-radio {
@@ -539,6 +447,22 @@ onUnmounted(() => {
     overflow-x: hidden;
     padding: 10px;
     scroll-behavior: smooth;
+
+    // 虚拟滚动模式
+    &.virtual-scroll-enabled {
+      padding: 0;
+      overflow-y: auto;
+
+      .virtual-scroll-container {
+        width: 100%;
+        will-change: transform;
+      }
+
+      .virtual-scroll-spacer {
+        width: 100%;
+        will-change: transform;
+      }
+    }
 
     // 自定义滚动条
     &::-webkit-scrollbar {

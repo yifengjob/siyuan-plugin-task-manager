@@ -37,5 +37,9 @@
   "notebookCount": "个笔记本",
   "docCount": "个文档",
   "datetimeFormatPatternTitle": "日期时间格式",
-  "datetimeFormatPatternDesc": "日期时间格式，参考 https://date-fns.org/docs/format。"
+  "datetimeFormatPatternDesc": "日期时间格式，参考 https://date-fns.org/docs/format。",
+  "search": "搜索任务...",
+  "searchResults": "找到 {count} 个结果",
+  "clearSearch": "清除搜索",
+  "noSearchResults": "未找到匹配的任务"
 }

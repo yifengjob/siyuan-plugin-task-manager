@@ -1,6 +1,7 @@
 import { Plugin } from 'siyuan';
 import { PluginConfig } from '@/types';
 import { useConfigStore } from '@/stores/config.store';
+import { handleError } from './ErrorHandler';
 
 export class PluginConfigManager {
   private plugin: Plugin;
@@ -45,7 +46,7 @@ export class PluginConfigManager {
     try {
       await this.plugin.removeData('config.json');
     } catch (error) {
-      console.error(`[${this.plugin.name}] 删除配置文件失败：`, error);
+      handleError(error, { context: 'RemoveConfigData' });
       throw error;
     }
   }

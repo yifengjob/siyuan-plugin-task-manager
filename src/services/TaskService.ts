@@ -8,6 +8,8 @@ import {
   TaskAttribute,
 } from '@/types';
 import { usePlugin } from '@/utils';
+import { handleError } from '@/utils/ErrorHandler';
+import { toggleTaskCheckbox, isTaskCompleted } from '@/utils/TaskMarkdownUtils';
 
 export class TaskService {
   constructor(private api: ApiService) {}
@@ -174,7 +176,7 @@ export class TaskService {
 
   async getTaskStatus(blockId: BlockId): Promise<boolean> {
     const markdown = await this.getTaskMarkdown(blockId);
-    return markdown?.startsWith('- [X]') ?? false;
+    return isTaskCompleted(markdown);
   }
   async getBlockCreated(blockId: string) {
     return this.api.getBlockCreated(blockId);
@@ -208,16 +210,15 @@ export class TaskService {
 
       const markdown = await this.getTaskMarkdown(blockId);
       if (!markdown) {
-        console.warn(`[TaskService] 获取任务markdown失败 ${blockId}`);
+        handleError(
+          new Error(`获取任务 markdown 失败: ${blockId}`),
+          { action: 'getTaskMarkdown', blockId },
+          false
+        );
         return;
       }
 
-      let newMarkdown = markdown;
-      if (completed) {
-        newMarkdown = newMarkdown.replace(/^-\s*\[\s*]/, '- [X]');
-      } else {
-        newMarkdown = newMarkdown.replace(/^-\s*\[X]/i, '- [ ]');
-      }
+      const newMarkdown = toggleTaskCheckbox(markdown, completed);
 
       if (newMarkdown === markdown) {
         // 状态未改变，无需更新
@@ -235,10 +236,11 @@ export class TaskService {
 
       await this.api.setBlockAttrs(blockId, originalAttrs);
     } catch (error) {
-      console.error(
-        `[TaskService] Failed to set task status for ${blockId}:`,
-        error
-      );
+      handleError(error, {
+        action: 'setTaskStatus',
+        blockId,
+        completed,
+      });
       throw error;
     }
   }

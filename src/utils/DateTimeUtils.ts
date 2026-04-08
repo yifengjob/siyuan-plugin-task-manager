@@ -1,4 +1,6 @@
 // 预编译正则表达式（提升性能）
+import { handleError } from './ErrorHandler';
+
 const DATE_TIME_8_DIGITS = /^\d{8}$/; // 8 位数字格式 (yyyyMMdd)
 const DATE_TIME_12_DIGITS = /^\d{12}$/; // 12 位数字格式 (yyyyMMddHHmm)
 const DATE_TIME_14_DIGITS = /^\d{14}$/; // 14 位数字格式 (yyyyMMddHHmmss)
@@ -75,7 +77,7 @@ export function parseDate(value: string): Date | null {
 
     return null;
   } catch (e) {
-    console.error(`[parseDate] 解析日期字符串失败：`, e);
+    handleError(e, { context: 'parseDate' }, false);
     return null;
   }
 }

@@ -12,8 +12,9 @@ import {
   type Placement,
 } from '@floating-ui/dom';
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
-import { formatDate } from '@/utils/DateTimeUtils.ts';
-import { useConfigStore } from '@/stores/config.store.ts';
+import { formatDate } from '@/utils/DateTimeUtils';
+import { useConfigStore } from '@/stores/config.store';
+import { POPOVER_HIDE_DELAY, DATE_PICKER_SELECTORS } from '@/constants';
 
 // ============ Props & Emits ============
 const props = defineProps<{
@@ -194,7 +195,7 @@ const cancelHideTimer = () => {
   }
 };
 
-const startHideTimer = (delay = 300) => {
+const startHideTimer = (delay = POPOVER_HIDE_DELAY) => {
   if (focusCount > 0) return;
   cancelHideTimer();
   hideTimer = setTimeout(() => {
@@ -220,14 +221,7 @@ const onPopoverMouseLeave = (e: MouseEvent) => {
   const relatedTarget = e.relatedTarget;
   let isInDatePicker = false;
   if (relatedTarget instanceof Element) {
-    const selectors = [
-      '.dp__menu',
-      '.dp__menu_wrapper',
-      '.dp__calendar',
-      '.dp__time_picker',
-      '.v-popper__popper',
-    ];
-    isInDatePicker = selectors.some((selector) =>
+    isInDatePicker = DATE_PICKER_SELECTORS.some((selector) =>
       relatedTarget.closest(selector)
     );
   }
@@ -253,15 +247,7 @@ const onPopoverFocusOut = (_e: FocusEvent) => {
     const activeElement = document.activeElement;
     let isInDatePicker = false;
     if (activeElement instanceof Element) {
-      const selectors = [
-        '.task-datetimepicker',
-        '.dp__menu',
-        '.dp__menu_wrapper',
-        '.dp__calendar',
-        '.dp__time_picker',
-        '.v-popper__popper',
-      ];
-      isInDatePicker = selectors.some((selector) =>
+      isInDatePicker = DATE_PICKER_SELECTORS.some((selector) =>
         activeElement.closest(selector)
       );
     }
@@ -302,18 +288,7 @@ const onDocumentClick = (e: MouseEvent) => {
   // 检查是否点击在日期选择器弹出面板内
   let isDatePickerPanel = false;
   if (target instanceof Element) {
-    // @vuepic/vue-datepicker 的弹出面板类名通常是 .dp__menu
-    // 但也可能包含 .dp__menu_wrapper 或 .v-popper__popper
-    const selectors = [
-      '.task-datetimepicker',
-      '.dp__menu',
-      '.dp__menu_wrapper',
-      '.dp__calendar',
-      '.dp__time_picker',
-      '.v-popper__popper',
-      '[class*="dp__"]',
-    ];
-    for (const selector of selectors) {
+    for (const selector of DATE_PICKER_SELECTORS) {
       if (target.closest(selector)) {
         isDatePickerPanel = true;
         break;
@@ -445,7 +420,7 @@ const close = (skipEmit = false) => {
     autoCloseTimer = null;
   }
   if (!skipEmit) {
-    setTimeout(() => emit('close'), 200);
+    setTimeout(() => emit('close'), POPOVER_HIDE_DELAY);
   }
   if (referenceElement) {
     referenceElement.removeEventListener('mouseenter', onTriggerMouseEnter);

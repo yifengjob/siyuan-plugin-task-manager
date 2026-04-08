@@ -37,5 +37,9 @@
   "notebookCount": "notebooks",
   "docCount": "blocks",
   "datetimeFormatTitle": "Datetime format",
-  "datetimeFormatDesc": "The format of the datetime. See https://date-fns.org/docs/format for more information."
+  "datetimeFormatDesc": "The format of the datetime. See https://date-fns.org/docs/format for more information.",
+  "search": "Search tasks...",
+  "searchResults": "Found {count} results",
+  "clearSearch": "Clear search",
+  "noSearchResults": "No matching tasks found"
 }

@@ -2,12 +2,19 @@ import type { Task, TaskAttrs } from '@/types';
 import { defineStore } from 'pinia';
 import { taskService } from '@/services/TaskService';
 import { ref } from 'vue';
+import { handleError } from '@/utils/ErrorHandler';
+import { toggleTaskCheckbox } from '@/utils/TaskMarkdownUtils';
 
 export const useTaskStore = defineStore('tasks', () => {
   const tasks = ref<Task[]>([]);
 
   async function loadTasks() {
-    tasks.value = await taskService.getAllTasks();
+    try {
+      tasks.value = await taskService.getAllTasks();
+    } catch (error) {
+      handleError(error, { action: 'loadTasks' });
+      throw error;
+    }
   }
 
   async function updateTaskAttributes(
@@ -32,7 +39,10 @@ export const useTaskStore = defineStore('tasks', () => {
     } catch (error) {
       // 失败时回滚
       tasks.value[taskIndex].attrs = originalAttrs;
-      console.error('[TaskStore]任务属性更新失败：', error);
+      handleError(error, {
+        action: 'updateTaskAttributes',
+        taskId,
+      });
     }
   }
 
@@ -56,9 +66,10 @@ export const useTaskStore = defineStore('tasks', () => {
       // 更新 markdown 内容（checkbox 状态）
       const markdown = tasks.value[taskIndex].markdown;
       if (markdown) {
-        tasks.value[taskIndex].markdown = completed
-          ? markdown.replace(/^-\s*\[\s*]/, '- [X]')
-          : markdown.replace(/^-\s*\[X]/i, '- [ ]');
+        tasks.value[taskIndex].markdown = toggleTaskCheckbox(
+          markdown,
+          completed
+        );
       }
 
       // 同步到服务器
@@ -68,7 +79,11 @@ export const useTaskStore = defineStore('tasks', () => {
       tasks.value[taskIndex].attrs.completed = originalCompleted;
       tasks.value[taskIndex].attrs.actualDue = originalActualDue;
       tasks.value[taskIndex].markdown = originalMarkdown;
-      console.error('[TaskStore] 任务状态切换失败：', error);
+      handleError(error, {
+        action: 'toggleTaskStatus',
+        taskId,
+        completed,
+      });
       throw error;
     }
   }
@@ -93,7 +108,11 @@ export const useTaskStore = defineStore('tasks', () => {
     } catch (error) {
       // 失败时回滚
       tasks.value[taskIndex].attrs = originalAttrs;
-      console.error('[TaskStore] 任务状态同步失败：', error);
+      handleError(error, {
+        action: 'syncTaskStatus',
+        taskId,
+        completed,
+      });
       throw error;
     }
   }

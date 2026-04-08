@@ -12,6 +12,7 @@ import {
   updateAncestorsState,
   updateIndeterminateState,
 } from '@/utils/TreeUtils.ts';
+import { handleError } from '@/utils/ErrorHandler';
 
 const props = defineProps<{
   configManager: PluginConfigManager;
@@ -52,9 +53,15 @@ async function loadChildrenWithRetry(
         return; // 成功加载
       }
     } catch (err) {
-      console.warn(
-        `加载子节点 ${node.id}（尝试 ${attempt + 1}/${maxRetries}）：`,
-        err
+      handleError(
+        err,
+        {
+          action: 'loadChildrenWithRetry',
+          nodeId: node.id,
+          attempt: attempt + 1,
+          maxRetries,
+        },
+        false
       );
 
       if (attempt < maxRetries) {
@@ -66,7 +73,11 @@ async function loadChildrenWithRetry(
   }
 
   // 所有重试都失败后，标记为已加载但无子节点（降级策略）
-  console.error(`所有重试尝试均失败，得${node.id}，标记为已加载且无子节点`);
+  handleError(
+    new Error(`所有重试尝试均失败: ${node.id}`),
+    { action: 'loadChildrenWithRetry', nodeId: node.id },
+    false
+  );
   node.childrenLoaded = true;
   node.hasChildren = false;
 }
@@ -119,7 +130,7 @@ async function loadNodesBatch(
             processNext();
           })
           .catch((err) => {
-            console.error('Unexpected error in loadNodesBatch:', err);
+            handleError(err, { action: 'loadNodesBatch' }, false);
             processNext();
           });
       }
@@ -161,7 +172,11 @@ async function loadChildren(node: TreeNode) {
       path = '/';
     } else {
       if (!node.box) {
-        console.warn(`Document node ${node.id} missing box property`);
+        handleError(
+          new Error(`Document node ${node.id} missing box property`),
+          { action: 'loadChildren', nodeId: node.id },
+          false
+        );
         node.childrenLoaded = true;
         node.hasChildren = false;
         return;
@@ -207,7 +222,7 @@ async function loadChildren(node: TreeNode) {
     node.childrenLoaded = true;
     node.hasChildren = newChildren.length > 0;
   } catch (err) {
-    console.error(`Failed to load children for ${node.id}:`, err);
+    handleError(err, { action: 'loadChildren', nodeId: node.id }, false);
     node.childrenLoaded = true;
     node.hasChildren = false;
   }
@@ -455,7 +470,7 @@ async function loadFullTree(nodes: TreeNode[]) {
   try {
     await loadNodesBatch(nodes, BATCH_CONCURRENCY_LIMIT);
   } catch (err) {
-    console.error('Failed to load full tree:', err);
+    handleError(err, { action: 'loadFullTree' });
     throw err;
   } finally {
     loadingProgress.value = 100;
@@ -508,9 +523,8 @@ onMounted(async () => {
     treeData.value = [...tree];
   } catch (err: unknown) {
     // 类型安全的错误处理
-
     error.value = err instanceof Error ? err.message : '未知错误';
-    console.error('[DocTreeSelector] Failed to initialize tree:', err);
+    handleError(err, { context: 'InitializeTree' }, false);
   } finally {
     loading.value = false;
     loadingProgress.value = 0;

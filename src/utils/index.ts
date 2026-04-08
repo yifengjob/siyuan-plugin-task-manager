@@ -15,3 +15,5 @@ export * from './PluginConfigManager.ts';
 export * from './PluginInstance.ts';
 export * from './SettingsFactory';
 export * from './TreeUtils.ts';
+export * from './ErrorHandler';
+export * from './TaskMarkdownUtils';

@@ -15,6 +15,7 @@ import {
   PluginConfigManager,
   setPlugin,
   SettingsFactory,
+  handleError,
 } from '@/utils';
 import '@/assets/index.scss';
 
@@ -27,7 +28,7 @@ const PLUGIN_INFO: PluginInfo = (() => {
   try {
     return PluginInfoString as PluginInfo;
   } catch (error) {
-    console.error('插件信息解析错误：', error);
+    handleError(error, { context: 'PluginInfoParse' }, false);
     return {
       version: '',
       author: '',
@@ -92,7 +93,7 @@ export default class TaskManagerPlugin extends Plugin {
       this.cleanup();
       await this.configManager.removeConfigData();
     } catch (error) {
-      console.error(`[${this.name}] 卸载失败:`, error);
+      handleError(error, { context: 'PluginUninstall' });
       throw error;
     }
   }
@@ -113,7 +114,7 @@ export default class TaskManagerPlugin extends Plugin {
     try {
       await this.configManager.loadConfig();
     } catch (error) {
-      console.error('[TaskManager] 加载插件配置失败：', error);
+      handleError(error, { context: 'LoadPluginConfig' }, false);
     }
   }
 
@@ -128,7 +129,7 @@ export default class TaskManagerPlugin extends Plugin {
       );
       this.setting = settingsFactory.createSetting();
     } catch (error) {
-      console.error('[TaskManager] 设置初始化失败：', error);
+      handleError(error, { context: 'SetupSettings' }, false);
     }
   }
 
@@ -147,7 +148,7 @@ export default class TaskManagerPlugin extends Plugin {
       this.appComponent = this.vueApp.mount(this.mountPoint) as AppComponent;
       document.body.appendChild(this.mountPoint);
     } catch (error) {
-      console.error('[TaskManager] 未能挂载Vue应用：', error);
+      handleError(error, { context: 'MountVueApp' });
       throw error;
     }
   }
@@ -199,7 +200,7 @@ export default class TaskManagerPlugin extends Plugin {
 
       await this.showTaskPopover(taskElement, originalEvent);
     } catch (error) {
-      console.error('[TaskManager] 点击事件错误处理：', error);
+      handleError(error, { context: 'HandleEditorClick' }, false);
     }
   }
 
@@ -252,7 +253,7 @@ export default class TaskManagerPlugin extends Plugin {
       this.appComponent = null;
       this.unbindEventListeners();
     } catch (error) {
-      console.error('[TaskManager] 清理过程中出现错误：', error);
+      handleError(error, { context: 'Cleanup' }, false);
     }
   }
 

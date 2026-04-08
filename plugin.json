@@ -1,26 +1,26 @@
 {
-    "name": "siyuan-plugin-task-manager",
-    "author": "YiFeng",
-    "url": "https://github.com/yifengjob/siyuan-plugin-task-manager",
-    "version": "1.0.0",
-    "minAppVersion": "3.3.0",
-    "disabledInPublish": true,
-    "backends": ["all"],
-    "frontends": ["desktop", "browser-desktop", "desktop-window"],
-    "displayName": {
-        "default": "任务管理",
-        "en_US": "Task manager"
-    },
-    "description": {
-        "default": "一个思源笔记插件，用于集中管理分散在整个工作空间的任务，给任务增加开始时间、计划完成时间、实际完成时间、优先级、备注等信息。",
-        "en_US": "A Siyuan notes plug-in to centrally manage tasks scattered throughout the workspace, adding start time, planned finish time, actual completion time, priority, notes, and other information to tasks."
-    },
-    "readme": {
-        "default": "README.zh_CN.md",
-        "en_US": "README.md"
-    },
-    "funding": {
-        "github": "yifengjob"
-    },
-    "keywords": []
+  "name": "siyuan-plugin-task-manager",
+  "author": "YiFeng",
+  "url": "https://github.com/yifengjob/siyuan-plugin-task-manager",
+  "version": "1.0.0",
+  "minAppVersion": "3.3.0",
+  "disabledInPublish": true,
+  "backends": ["all"],
+  "frontends": ["desktop", "browser-desktop", "desktop-window"],
+  "displayName": {
+    "default": "任务管理",
+    "en_US": "Task manager"
+  },
+  "description": {
+    "default": "一个思源笔记插件，用于集中管理分散在整个工作空间的任务，给任务增加开始时间、计划完成时间、实际完成时间、优先级、备注等信息。",
+    "en_US": "A Siyuan notes plug-in to centrally manage tasks scattered throughout the workspace, adding start time, planned finish time, actual completion time, priority, notes, and other information to tasks."
+  },
+  "readme": {
+    "default": "README.md",
+    "en_US": "README.en_US.md"
+  },
+  "funding": {
+    "github": "yifengjob"
+  },
+  "keywords": ["task", "todo", "管理", "任务"]
 }

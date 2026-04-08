@@ -39,6 +39,20 @@ const onToggle = (e: Event) => {
 const onClick = (e: MouseEvent) => {
   emit('click', props.task, e);
 };
+
+// 优化：只有存在元数据时才渲染对应的区域
+const hasAnyMetadata = computed(() => {
+  return !!(props.task.attrs.notes || props.task.attrs.priority);
+});
+
+const hasAnyDateInfo = computed(() => {
+  return !!(
+    props.task.created ||
+    props.task.attrs.start ||
+    props.task.attrs.planDue ||
+    props.task.attrs.actualDue
+  );
+});
 </script>
 
 <template>
@@ -59,6 +73,7 @@ const onClick = (e: MouseEvent) => {
     </div>
     <div class="task-metas">
       <div
+        v-if="task.attrs.priority"
         class="task-priority"
         :class="task.attrs.priority"
         :title="i18n.priority"
@@ -83,34 +98,38 @@ const onClick = (e: MouseEvent) => {
         {{ statusText }}
       </div>
     </div>
-    <div class="task-metas">
-      <div class="task-notes" :title="i18n.notes">
+    <div v-if="hasAnyMetadata" class="task-metas">
+      <div v-if="task.attrs.notes" class="task-notes" :title="i18n.notes">
         <svg class="icon">
           <use xlink:href="#iconTaskNotes"></use>
         </svg>
-        {{ task.attrs.notes || '-' }}
+        {{ task.attrs.notes }}
       </div>
     </div>
-    <div class="task-metas">
-      <div class="task-date" :title="i18n.created">
+    <div v-if="hasAnyDateInfo" class="task-metas task-dates">
+      <div v-if="task.created" class="task-date" :title="i18n.created">
         <svg class="icon">
           <use xlink:href="#iconTaskCreated"></use>
         </svg>
         {{ formatDate(task.created, dateTimeFormatPattern) }}
       </div>
-      <div class="task-date" :title="i18n.start">
+      <div v-if="task.attrs.start" class="task-date" :title="i18n.start">
         <svg class="icon">
           <use xlink:href="#iconTaskStart"></use>
         </svg>
         {{ formatDate(task.attrs.start, dateTimeFormatPattern) }}
       </div>
-      <div class="task-date" :title="i18n.planDue">
+      <div v-if="task.attrs.planDue" class="task-date" :title="i18n.planDue">
         <svg class="icon">
           <use xlink:href="#iconTaskPlanDue"></use>
         </svg>
         {{ formatDate(task.attrs.planDue, dateTimeFormatPattern) }}
       </div>
-      <div class="task-date" :title="i18n.actualDue">
+      <div
+        v-if="task.attrs.actualDue"
+        class="task-date"
+        :title="i18n.actualDue"
+      >
         <svg class="icon">
           <use xlink:href="#iconTaskActualDue"></use>
         </svg>
@@ -251,6 +270,11 @@ const onClick = (e: MouseEvent) => {
     margin-top: 8px;
     font-size: 12px;
     color: var(--b3-theme-on-surface);
+
+    &.task-dates {
+      // 日期区域特殊样式，允许换行更自然
+      gap: 8px;
+    }
 
     .task-priority,
     .task-status,
