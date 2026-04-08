@@ -342,7 +342,7 @@ If you're feeling generous, please scan the QR code below to support me. This wi
 the plugin:
 
 <div style="text-align: center;">
-<img src="https://cdn.jsdelivr.net/gh/yifengjob/siyuan-plugin-concat-subdocs/wechat-reward.png" alt="WeChat Reward Code" style="height: auto; box-shadow: 0 0 2px #aaaaaa; max-width: 300px;">
+<img src="https://cdn.jsdelivr.net/gh/yifengjob/siyuan-plugin-concat-subdocs/wechat-reward.png" alt="WeChat Reward Code" width="300px" height="auto" style="box-shadow: 0 0 2px #aaaaaa;">
 </div>
 
 <div style="text-align: center; color: #888; font-size: 12px;">
