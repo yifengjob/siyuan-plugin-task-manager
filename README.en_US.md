@@ -331,7 +331,6 @@ This project is open-sourced under the AGPL-3.0 license.
 ## 📮 Feedback & Support
 
 - **Bug Reports**: [GitHub Issues](https://github.com/yifengjob/siyuan-plugin-task-manager/issues)
-- **Feature Requests**: [GitHub Discussions](https://github.com/yifengjob/siyuan-plugin-task-manager/discussions)
 - **Author Profile**: [YiFeng](https://github.com/yifengjob)
 
 ---
