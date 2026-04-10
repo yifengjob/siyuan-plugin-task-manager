@@ -6,6 +6,17 @@ import { createApp, App } from 'vue';
 import DocTreeSelector from '@/components/DocTreeSelector.vue';
 import { useTaskStore } from '@/stores/tasks.store';
 
+/**
+ * 插件设置工厂类
+ *
+ * @remarks
+ * 负责任务管理器的所有配置项的创建和管理
+ * 包括:
+ * - 自动隐藏弹窗延迟
+ * - 默认进度分组
+ * - 日期时间格式
+ * - 任务过滤(文档树选择)
+ */
 export class SettingsFactory {
   private setting!: Setting;
   private readonly configManager: PluginConfigManager;
@@ -35,6 +46,7 @@ export class SettingsFactory {
     this.addAutoHidePopoverDelaySetting();
     this.addDefaultProgressGroupSetting();
     this.addDatetimeFormatPatternSetting();
+    this.addVirtualScrollThresholdSetting();
     this.addTaskFilterSetting();
 
     return this.setting;
@@ -131,6 +143,27 @@ export class SettingsFactory {
           this.configManager.getConfig().datetimeFormatPattern,
           'text',
           200
+        ),
+    });
+  }
+
+  /**
+   * 虚拟滚动阈值设置
+   */
+  private addVirtualScrollThresholdSetting(): void {
+    this.setting.addItem({
+      title: this.i18n.virtualScrollThresholdTitle,
+      description: this.i18n.virtualScrollThresholdDesc,
+      direction: 'row',
+      createActionElement: () =>
+        this.createInput(
+          'virtualScrollThreshold',
+          String(this.configManager.getConfig().virtualScrollThreshold),
+          'number',
+          100,
+          0,
+          1000,
+          5
         ),
     });
   }

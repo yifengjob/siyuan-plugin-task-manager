@@ -1,20 +1,23 @@
+date
 <script setup lang="ts">
-import type { Task } from '@/types';
+import type { Task, PopoverOptions } from '@/types';
 import { taskService } from '@/services/TaskService';
 import { usePlugin } from '@/utils';
 import { handleError } from '@/utils/ErrorHandler';
 import { useTaskStore } from '@/stores/tasks.store';
+import { useConfigStore } from '@/stores/config.store';
 import TaskItem from './TaskItem.vue';
 import ErrorBoundary from './ErrorBoundary.vue';
 import { useTaskFilter } from '@/composables/useTaskFilter';
 import { useTaskSync } from '@/composables/useTaskSync';
 import { useTooltip } from '@/composables/useTooltip';
-import { useVirtualScroll } from '@/composables/useVirtualScroll';
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import { computed } from 'vue';
 
 const plugin = usePlugin();
 const i18n = plugin.i18n;
 const taskStore = useTaskStore();
+const configStore = useConfigStore();
 
 // 使用 composables
 const {
@@ -36,24 +39,103 @@ const { isLoading, loadError, handleRefresh } = useTaskSync();
 const { onMouseEnter: onTitleMouseEnter, onMouseLeave: onTitleMouseLeave } =
   useTooltip();
 
-// 扁平化任务列表用于虚拟滚动
-const allTasksList = computed(() => {
-  return groups.value.flatMap((group) => group.tasks);
+// 扁平化任务列表用于虚拟滚动（带分组标题）
+const mixedItemsList = computed(() => {
+  const items: Array<{
+    id: string;
+    type: 'header' | 'task';
+    rootId?: string;
+    rootTitle?: string;
+    boxTitle?: string;
+    rootPath?: string;
+    taskCount?: number;
+    task?: Task;
+  }> = [];
+  groups.value.forEach((group) => {
+    // 添加标题项
+    items.push({
+      id: `header-${group.rootId}`,
+      type: 'header',
+      rootId: group.rootId,
+      rootTitle: group.rootTitle,
+      boxTitle: group.boxTitle,
+      rootPath: group.rootPath,
+      taskCount: group.tasks.length,
+    });
+    // 添加该组的所有任务
+    group.tasks.forEach((task) => {
+      items.push({
+        id: `task-${task.id}`,
+        type: 'task',
+        task,
+      });
+    });
+  });
+  return items;
 });
 
-// 使用虚拟滚动
-const {
-  containerRef: virtualContainerRef,
-  isEnabled: isVirtualScrollEnabled,
-  visibleItems: visibleTasks,
-  offsetY,
-  totalHeight,
-} = useVirtualScroll(allTasksList);
+// 是否启用虚拟滚动（从配置中读取阈值）
+const shouldEnableVirtualScroll = computed(
+  () => mixedItemsList.value.length >= configStore.config.virtualScrollThreshold
+);
 
 /**
- * 任务点击处理
+ * 任务点击处理 - 显示编辑 Popover
  */
-const onTaskClick = async (task: Task) => {
+const onTaskClick = async (task: Task, event?: MouseEvent) => {
+  const id = task.id;
+  if (!id) return;
+
+  try {
+    // 获取任务的 DOM 元素
+    const taskElement = document.querySelector(
+      `.task-item[data-id="${id}"]`
+    ) as HTMLElement;
+
+    if (!taskElement) {
+      // 如果找不到 DOM 元素，降级为打开文档
+      await taskService.openTask(id);
+      return;
+    }
+
+    // 获取任务属性
+    const [attrs, createdDate] = await Promise.all([
+      taskService.getTaskAttrs(id),
+      taskService.getBlockCreated(id),
+    ]);
+
+    const taskElementRect = taskElement.getBoundingClientRect();
+    const referencePoint = {
+      x: taskElementRect.left,
+      y: event?.y || taskElementRect.top + taskElementRect.height / 2,
+    };
+    // 构建 Popover 选项
+    const options: PopoverOptions = {
+      placement: 'left',
+      offset: 15,
+      taskId: id,
+      referenceEl: taskElement,
+      isEditable: true,
+      attrs,
+      createdDate,
+      referencePoint: referencePoint,
+    };
+
+    // 显示 Popover - 通过 plugin 实例访问 appComponent
+    // @ts-expect-error - appComponent 是私有属性，但我们需要访问它
+    if (plugin.appComponent && 'showPopover' in plugin.appComponent) {
+      // @ts-expect-error - showPopover 方法存在于 appComponent 中
+      plugin.appComponent.showPopover(options);
+    }
+  } catch (error) {
+    handleError(error, { action: 'showTaskPopover', taskId: id });
+  }
+};
+
+/**
+ * 打开任务所在的块
+ */
+const onOpenTask = async (task: Task) => {
   const id = task.id;
   if (id) {
     try {
@@ -133,9 +215,8 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     <!-- 内容区域 -->
     <ErrorBoundary name="SidebarContent">
       <div
-        ref="virtualContainerRef"
         class="task-sidebar-content"
-        :class="{ 'virtual-scroll-enabled': isVirtualScrollEnabled }"
+        :class="{ 'virtual-scroll-enabled': shouldEnableVirtualScroll }"
       >
         <div v-if="isLoading" class="task-sidebar-loading">
           <div class="loading-spinner"></div>
@@ -158,24 +239,57 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
         </div>
         <div v-else>
           <!-- 虚拟滚动模式 -->
-          <div
-            v-if="isVirtualScrollEnabled"
-            class="virtual-scroll-container"
-            :style="{ height: totalHeight + 'px', position: 'relative' }"
+          <DynamicScroller
+            v-if="shouldEnableVirtualScroll"
+            v-slot="{ item, index, active }"
+            class="virtual-scroller"
+            :items="mixedItemsList"
+            :min-item-size="50"
+            key-field="id"
           >
-            <div
-              class="virtual-scroll-spacer"
-              :style="{ transform: `translateY(${offsetY}px)` }"
+            <DynamicScrollerItem
+              :item="item"
+              :active="active"
+              :size-dependencies="[
+                item.type === 'task' && item.task
+                  ? [
+                      item.task.attrs.priority,
+                      item.task.attrs.actualDue,
+                      item.task.attrs.start,
+                      item.task.attrs.planDue,
+                      item.task.attrs.notes,
+                    ]
+                  : [],
+              ]"
+              :data-index="index"
             >
+              <!-- 标题项：直接使用 task-doc-title，不使用 task-doc-group 包裹 -->
+              <div v-if="item.type === 'header'" class="virtual-scroll-header">
+                <div
+                  class="task-doc-title"
+                  @mouseenter="
+                    onTitleMouseEnter(
+                      $event,
+                      '/' + item.boxTitle + item.rootPath
+                    )
+                  "
+                  @mouseleave="onTitleMouseLeave"
+                >
+                  <span class="task-doc-title-text">{{ item.rootTitle }}</span>
+                  <span class="task-doc-count">{{ item.taskCount }}</span>
+                </div>
+              </div>
+              <!-- 任务项：直接使用 TaskItem，不使用 task-doc-group 包裹 -->
               <TaskItem
-                v-for="task in visibleTasks"
-                :key="task.id"
-                :task="task"
+                v-else-if="item.type === 'task' && item.task"
+                class="virtual-scroll-task"
+                :task="item.task"
                 @click="onTaskClick"
+                @open-task="onOpenTask"
                 @toggle-completed="toggleCompleted"
               />
-            </div>
-          </div>
+            </DynamicScrollerItem>
+          </DynamicScroller>
           <!-- 普通模式 -->
           <div v-else>
             <div
@@ -202,6 +316,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
                   :key="task.id"
                   :task="task"
                   @click="onTaskClick"
+                  @open-task="onOpenTask"
                   @toggle-completed="toggleCompleted"
                 />
               </ErrorBoundary>
@@ -450,18 +565,8 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
 
     // 虚拟滚动模式
     &.virtual-scroll-enabled {
-      padding: 0;
-      overflow-y: auto;
-
-      .virtual-scroll-container {
-        width: 100%;
-        will-change: transform;
-      }
-
-      .virtual-scroll-spacer {
-        width: 100%;
-        will-change: transform;
-      }
+      padding: 0; // 移除默认 padding
+      overflow-x: visible !important; // 允许横向溢出，显示 box-shadow
     }
 
     // 自定义滚动条
@@ -550,10 +655,11 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     border-radius: 10px;
     margin-bottom: 10px;
     color: var(--b3-theme-on-surface);
+    border: 1px solid rgba(128, 128, 128, 0.1);
     border-left: 4px solid var(--b3-theme-primary);
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--b3-point-shadow);
+    //box-shadow: var(--b3-point-shadow);
 
     &:hover {
       background: linear-gradient(
@@ -561,9 +667,9 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
         rgba(var(--b3-theme-primary-rgb), 0.12) 0%,
         rgba(128, 128, 128, 0.08) 100%
       );
-      transform: translateX(3px);
-      box-shadow: var(--b3-point-shadow);
-      border-left-width: 5px;
+      transform: translateY(-1px);
+      border-color: rgba(128, 128, 128, 0.15);
+      border-left-color: var(--b3-theme-primary);
     }
 
     .task-doc-title-text {
@@ -714,6 +820,39 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
   50% {
     opacity: 1;
     transform: scale(1.15);
+  }
+}
+
+// 1. 容器级别：移除 padding，让 .virtual-scroller 内部控制
+.task-sidebar-content.virtual-scroll-enabled {
+  padding: 0 !important;
+}
+
+// 2. 虚拟滚动容器：设置 padding
+.task-sidebar-content.virtual-scroll-enabled .virtual-scroller {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 10px !important;
+  box-sizing: border-box !important;
+}
+
+// 3. 修复 margin 塌陷 + 设置间距
+.task-sidebar-content.virtual-scroll-enabled {
+  .vue-recycle-scroller__item-view > div[data-index] {
+    padding: 1px 0; // 防止 margin 塌陷
+    width: 100%;
+
+    .virtual-scroll-header {
+      margin: 0 0 10px 0 !important;
+
+      .task-doc-title {
+        margin-bottom: 0 !important;
+      }
+    }
+
+    .virtual-scroll-task {
+      margin: 0 0 8px 0 !important;
+    }
   }
 }
 </style>

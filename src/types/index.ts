@@ -1,4 +1,6 @@
 import { ComponentPublicInstance } from 'vue';
+import { FilterStatus } from '@/constants';
+import { Placement } from '@floating-ui/dom';
 
 export type DocumentId = string;
 export type BlockId = string;
@@ -174,11 +176,12 @@ export interface TaskAttrs {
 }
 
 export interface PluginConfig {
-  defaultProgressGroup: 'all' | 'completed' | 'incomplete' | string;
+  defaultProgressGroup: FilterStatus;
   autoHidePopoverDelay: number;
   filteredNotebooks: string[];
   filteredBlocks: string[];
   datetimeFormatPattern: string;
+  virtualScrollThreshold: number;
 }
 
 export interface PluginInfo {
@@ -189,6 +192,8 @@ export interface PluginInfo {
 }
 
 export interface PopoverOptions {
+  placement: Placement;
+  offset?: number;
   taskId: string;
   referenceEl: HTMLElement;
   isEditable: boolean;

@@ -7,6 +7,7 @@ import { useConfigStore } from '@/stores/config.store';
 const props = defineProps<{ task: Task }>();
 const emit = defineEmits<{
   (e: 'click', task: Task, event: MouseEvent): void;
+  (e: 'open-task', task: Task): void;
   (e: 'toggle-completed', taskId: string, completed: boolean): void;
 }>();
 const plugin = usePlugin();
@@ -37,7 +38,19 @@ const onToggle = (e: Event) => {
 };
 
 const onClick = (e: MouseEvent) => {
+  // 如果点击的是复选框，不触发任务点击
+  const target = e.target as HTMLElement;
+  if (target.closest('.task-checkbox-container')) {
+    return;
+  }
+  // 阻止事件冒泡到 document，防止 Popover 被关闭
+  e.stopPropagation();
   emit('click', props.task, e);
+};
+
+const onTitleClick = () => {
+  // 点击任务标题时打开任务所在的块
+  emit('open-task', props.task);
 };
 
 // 优化：只有存在元数据时才渲染对应的区域
@@ -56,7 +69,7 @@ const hasAnyDateInfo = computed(() => {
 </script>
 
 <template>
-  <div class="task-item" :data-id="task.id">
+  <div class="task-item" :data-id="task.id" @click="onClick">
     <div class="task-header">
       <label class="task-checkbox-container">
         <input
@@ -67,7 +80,7 @@ const hasAnyDateInfo = computed(() => {
         />
         <span class="checkmark"></span>
       </label>
-      <div class="task-title" @click="onClick">
+      <div class="task-title" @click.stop="onTitleClick">
         {{ task.content || i18n.untitled }}
       </div>
     </div>
@@ -147,14 +160,11 @@ const hasAnyDateInfo = computed(() => {
   border-radius: 10px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(128, 128, 128, 0.08);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  //box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 
   &:hover {
     background: var(--b3-theme-background);
     transform: translateY(-1px);
-    box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.08),
-      0 2px 4px rgba(0, 0, 0, 0.04);
     border-color: rgba(128, 128, 128, 0.15);
   }
 

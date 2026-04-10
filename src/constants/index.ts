@@ -5,6 +5,8 @@
 
 // ============ 性能优化相关常量 ============
 
+import { PluginConfig } from '@/types';
+
 /**
  * WebSocket 事件处理节流延迟（毫秒）
  * 用于防止高频任务状态变更导致频繁刷新
@@ -62,7 +64,7 @@ export const SIDEBAR_DEFAULT_WIDTH = 360;
 /**
  * 启用虚拟滚动的最小任务数量
  */
-export const VIRTUAL_SCROLL_THRESHOLD = 100;
+export const VIRTUAL_SCROLL_THRESHOLD = 50;
 
 /**
  * 虚拟滚动项默认高度（像素）
@@ -103,25 +105,6 @@ export const SQL_PARAM_PREFIX = '{{';
  */
 export const SQL_PARAM_SUFFIX = '}}';
 
-// ============ 任务属性常量 ============
-
-/**
- * 任务属性名前缀
- */
-export const TASK_ATTR_PREFIX = 'custom-siyuan-plugin-task-manager-task-';
-
-/**
- * 任务属性键名映射
- */
-export const TASK_ATTR_KEYS = {
-  start: `${TASK_ATTR_PREFIX}start`,
-  planDue: `${TASK_ATTR_PREFIX}plandue`,
-  actualDue: `${TASK_ATTR_PREFIX}actualdue`,
-  priority: `${TASK_ATTR_PREFIX}priority`,
-  notes: `${TASK_ATTR_PREFIX}notes`,
-  completed: `${TASK_ATTR_PREFIX}completed`,
-} as const;
-
 // ============ 优先级常量 ============
 
 /**
@@ -150,7 +133,7 @@ export const FILTER_STATUS = {
   INCOMPLETE: 'incomplete',
 } as const;
 
-export type FilterStatus = keyof typeof FILTER_STATUS;
+export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS];
 
 // ============ 错误消息常量 ============
 
@@ -176,6 +159,16 @@ export const SUCCESS_MESSAGES = {
   TASK_UPDATED: '任务更新成功',
 } as const;
 
+// ============ 默认配置常量 ============
+export const DEFAULT_CONFIG: PluginConfig = {
+  defaultProgressGroup: FILTER_STATUS.INCOMPLETE,
+  autoHidePopoverDelay: DEFAULT_AUTO_HIDE_DELAY,
+  filteredNotebooks: [],
+  filteredBlocks: [],
+  datetimeFormatPattern: DEFAULT_DATETIME_FORMAT,
+  virtualScrollThreshold: VIRTUAL_SCROLL_THRESHOLD,
+};
+
 // ============ CSS 类名常量 ============
 
 /**
@@ -198,5 +191,5 @@ export const SCROLL_CONTAINER_SELECTORS = [
   '.protyle-content',
   '.fn__flex-1',
   '.layout__tab-content',
-  '.task-sidebar',
+  '.task-sidebar-content',
 ] as const;

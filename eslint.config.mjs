@@ -56,7 +56,7 @@ export default tseslint.config(
       semi: ['error', 'always'],
 
       // Vue 特定规则
-      'vue/html-indent': ['warn', 2],
+      'vue/html-indent': 'off', // 关闭 ESLint 缩进规则，由 Prettier 控制
       'vue/block-order': [
         'warn',
         {

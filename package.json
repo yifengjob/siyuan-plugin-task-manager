@@ -20,12 +20,13 @@
     "@floating-ui/dom": "^1.7.6",
     "@vuepic/vue-datepicker": "^12.1.0",
     "pinia": "^3.0.4",
-    "vue": "^3.5.32"
+    "vue": "^3.5.32",
+    "vue-virtual-scroller": "^2.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/minimist": "^1.2.5",
-    "@types/node": "^25.5.2",
+    "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.1",
     "eslint": "^10.2.0",
@@ -38,14 +39,14 @@
     "glob": "^13.0.6",
     "globals": "^17.4.0",
     "minimist": "^1.2.8",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.2",
     "rollup-plugin-livereload": "^2.0.5",
     "sass": "^1.99.0",
     "siyuan": "1.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2",
-    "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.5",
+    "typescript-eslint": "^8.58.1",
+    "vite": "^8.0.8",
     "vite-plugin-remove-console": "^2.2.0",
     "vite-plugin-static-copy": "^4.0.1",
     "vite-plugin-zip-pack": "^1.2.4"

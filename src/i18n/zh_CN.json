@@ -38,6 +38,8 @@
   "docCount": "个文档",
   "datetimeFormatPatternTitle": "日期时间格式",
   "datetimeFormatPatternDesc": "日期时间格式，参考 https://date-fns.org/docs/format。",
+  "virtualScrollThresholdTitle": "虚拟滚动阈值",
+  "virtualScrollThresholdDesc": "启用虚拟滚动的最小任务数量。当任务数超过此值时，将使用虚拟滚动优化性能。",
   "search": "搜索任务...",
   "searchResults": "找到 {count} 个结果",
   "clearSearch": "清除搜索",

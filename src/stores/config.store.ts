@@ -1,15 +1,10 @@
 import { defineStore } from 'pinia';
 import { shallowRef } from 'vue';
 import type { PluginConfig } from '@/types';
+import { DEFAULT_CONFIG } from '@/constants';
 
 export const useConfigStore = defineStore('config', () => {
-  const config = shallowRef<PluginConfig>({
-    defaultProgressGroup: 'incomplete',
-    autoHidePopoverDelay: 5,
-    filteredNotebooks: [],
-    filteredBlocks: [],
-    datetimeFormatPattern: 'yyyy-MM-dd HH:mm',
-  });
+  const config = shallowRef<PluginConfig>(DEFAULT_CONFIG);
   function setConfig(newConfig: PluginConfig) {
     config.value = newConfig;
   }

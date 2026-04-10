@@ -38,6 +38,8 @@
   "docCount": "blocks",
   "datetimeFormatTitle": "Datetime format",
   "datetimeFormatDesc": "The format of the datetime. See https://date-fns.org/docs/format for more information.",
+  "virtualScrollThresholdTitle": "Virtual scroll threshold",
+  "virtualScrollThresholdDesc": "The minimum number of tasks to enable virtual scrolling. Virtual scrolling will be used when the task count exceeds this value to optimize performance.",
   "search": "Search tasks...",
   "searchResults": "Found {count} results",
   "clearSearch": "Clear search",

@@ -5,6 +5,7 @@ import TaskPopover from '@/components/TaskPopover.vue';
 import { useTaskStore } from '@/stores/tasks.store.ts';
 import { usePlugin, IconRegistry } from '@/utils';
 import { PopoverOptions, TaskAttrs } from '@/types';
+import { SIDEBAR_DEFAULT_WIDTH } from '@/constants';
 
 const plugin = usePlugin();
 let dockApp: App<Element> | null = null;
@@ -39,7 +40,7 @@ onMounted(() => {
     config: {
       position: 'RightTop',
       size: {
-        width: 360,
+        width: SIDEBAR_DEFAULT_WIDTH,
         height: 0,
       },
       icon: 'iconTaskBoard',

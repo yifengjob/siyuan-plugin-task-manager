@@ -14,7 +14,11 @@ import {
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
 import { formatDate } from '@/utils/DateTimeUtils';
 import { useConfigStore } from '@/stores/config.store';
-import { POPOVER_HIDE_DELAY, DATE_PICKER_SELECTORS } from '@/constants';
+import {
+  POPOVER_HIDE_DELAY,
+  DATE_PICKER_SELECTORS,
+  SCROLL_CONTAINER_SELECTORS,
+} from '@/constants';
 
 // ============ Props & Emits ============
 const props = defineProps<{
@@ -49,6 +53,8 @@ let referencePoint: { x: number; y: number } | null = null;
 let scrollListeners: (() => void)[] = [];
 const currentBlockId = ref<string | undefined>(undefined);
 let cleanupAutoUpdate: (() => void) | null = null;
+// 标记是否正在切换任务，防止在切换过程中被关闭
+let isSwitchingTask = false;
 
 // 浮动 UI 的虚拟参考元素（用于鼠标坐标定位）
 let virtualReference: { getBoundingClientRect: () => DOMRect } | null = null;
@@ -117,9 +123,9 @@ const updatePosition = () => {
   if (!reference) return;
 
   computePosition(reference, containerRef.value, {
-    placement: 'top', // 基础方向，允许 flip 翻转
+    placement: props.options?.placement ?? 'top', // 基础方向，允许 flip 翻转
     middleware: [
-      offset(30),
+      offset(props.options?.offset ?? 30),
       flip(),
       shift({ padding: 8 }),
       arrowMiddleware({ element: arrowRef.value, padding: 4 }),
@@ -196,10 +202,12 @@ const cancelHideTimer = () => {
 };
 
 const startHideTimer = (delay = POPOVER_HIDE_DELAY) => {
-  if (focusCount > 0) return;
+  if (focusCount > 0 || isSwitchingTask) return;
   cancelHideTimer();
   hideTimer = setTimeout(() => {
-    close();
+    if (!isSwitchingTask) {
+      close();
+    }
   }, delay);
 };
 
@@ -267,19 +275,8 @@ const onPopoverFocusOut = (_e: FocusEvent) => {
 };
 
 // ============ Event Handlers for Trigger Element ============
-const onTriggerMouseEnter = () => {
-  cancelHideTimer();
-};
-
-const onTriggerMouseLeave = (e: MouseEvent) => {
-  if (
-    containerRef.value &&
-    containerRef.value.contains(e.relatedTarget as Node)
-  ) {
-    return;
-  }
-  startHideTimer();
-};
+// 已移除：不再在 trigger 元素上绑定 mouseenter/mouseleave
+// 原因：会导致切换任务时的时序问题，Popover 自身已有完善的显示/隐藏逻辑
 
 // ============ Global Event Handlers ============
 const onDocumentClick = (e: MouseEvent) => {
@@ -335,7 +332,7 @@ const onTextareaInput = () => {
 const bindScrollEvents = () => {
   window.addEventListener('scroll', onScroll, { passive: true });
   const scrollContainers = document.querySelectorAll(
-    '.protyle-content, .fn__flex-1, .layout__tab-content, .task-sidebar'
+    SCROLL_CONTAINER_SELECTORS.join(', ')
   );
   scrollContainers.forEach((container) => {
     container.addEventListener('scroll', onScroll, { passive: true });
@@ -352,27 +349,32 @@ const unbindScrollEvents = () => {
 };
 
 // ============ Show & Close ============
-// 使用标志位防止重复绑定
-let isListenersBound = false;
+// 使用引用计数来管理多实例场景下的事件监听器
+let listenerRefCount = 0;
 
 const bindEventListeners = () => {
-  if (isListenersBound) return;
+  if (listenerRefCount > 0) {
+    listenerRefCount++;
+    return;
+  }
 
   document.addEventListener('click', onDocumentClick);
   document.addEventListener('keydown', onKeydown, { capture: true });
   bindScrollEvents();
   window.addEventListener('resize', onResize);
-  isListenersBound = true;
+  listenerRefCount++;
 };
 
 const unbindEventListeners = () => {
-  if (!isListenersBound) return;
+  if (listenerRefCount <= 0) return;
+
+  listenerRefCount--;
+  if (listenerRefCount > 0) return;
 
   document.removeEventListener('click', onDocumentClick);
   document.removeEventListener('keydown', onKeydown, { capture: true });
   unbindScrollEvents();
   window.removeEventListener('resize', onResize);
-  isListenersBound = false;
 };
 const show = () => {
   if (!props.options) return;
@@ -382,7 +384,49 @@ const show = () => {
     close();
     return;
   }
-  if (isVisible.value) close(true);
+
+  // 标记开始切换任务，必须在最前面设置，防止任何定时器触发
+  isSwitchingTask = true;
+
+  // 立即取消所有可能触发关闭的定时器
+  cancelHideTimer();
+  if (autoCloseTimer) {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
+
+  // 如果已经显示，先更新表单数据，但不要关闭和重新绑定事件
+  if (isVisible.value) {
+    referenceElement = props.options.referenceEl;
+    referencePoint = props.options.referencePoint || null;
+    virtualReference = null;
+    updateForm();
+    currentBlockId.value = blockId;
+
+    // 更新位置
+    nextTick(() => {
+      startAutoUpdate();
+      updatePosition();
+    });
+
+    // 重置自动隐藏定时器
+    if (autoCloseTimer) {
+      clearTimeout(autoCloseTimer);
+      autoCloseTimer = null;
+    }
+    if (plugin.getConfig().autoHidePopoverDelay > 0) {
+      autoCloseTimer = setTimeout(() => {
+        if (!isMouseOverPopover && !isSwitchingTask) close();
+        autoCloseTimer = null;
+      }, plugin.getConfig().autoHidePopoverDelay * 1000);
+    }
+
+    // 延迟重置切换标志，确保所有异步操作完成
+    setTimeout(() => {
+      isSwitchingTask = false;
+    }, 200);
+    return;
+  }
 
   referenceElement = props.options.referenceEl;
   referencePoint = props.options.referencePoint || null;
@@ -392,10 +436,8 @@ const show = () => {
   isVisible.value = true;
   currentBlockId.value = blockId;
 
-  if (referenceElement) {
-    referenceElement.addEventListener('mouseenter', onTriggerMouseEnter);
-    referenceElement.addEventListener('mouseleave', onTriggerMouseLeave);
-  }
+  // 不再在 referenceElement 上绑定 mouseenter/mouseleave
+  // 因为会导致切换任务时的时序问题
 
   nextTick(() => {
     startAutoUpdate();
@@ -405,12 +447,17 @@ const show = () => {
   // 自动隐藏定时器
   if (plugin.getConfig().autoHidePopoverDelay > 0) {
     autoCloseTimer = setTimeout(() => {
-      if (!isMouseOverPopover) close();
+      if (!isMouseOverPopover && !isSwitchingTask) close();
       autoCloseTimer = null;
     }, plugin.getConfig().autoHidePopoverDelay * 1000);
   }
 
   bindEventListeners();
+
+  // 延迟重置切换标志
+  setTimeout(() => {
+    isSwitchingTask = false;
+  }, 200);
 };
 
 const close = (skipEmit = false) => {
@@ -422,10 +469,7 @@ const close = (skipEmit = false) => {
   if (!skipEmit) {
     setTimeout(() => emit('close'), POPOVER_HIDE_DELAY);
   }
-  if (referenceElement) {
-    referenceElement.removeEventListener('mouseenter', onTriggerMouseEnter);
-    referenceElement.removeEventListener('mouseleave', onTriggerMouseLeave);
-  }
+  // 不再需要移除 referenceElement 上的事件监听器
   isVisible.value = false;
   referenceElement = null;
   referencePoint = null;
@@ -454,10 +498,7 @@ watch(
 onUnmounted(() => {
   cancelHideTimer();
   if (autoCloseTimer) clearTimeout(autoCloseTimer);
-  if (referenceElement) {
-    referenceElement.removeEventListener('mouseenter', onTriggerMouseEnter);
-    referenceElement.removeEventListener('mouseleave', onTriggerMouseLeave);
-  }
+  // 不再需要移除 referenceElement 上的事件监听器
   document.removeEventListener('click', onDocumentClick);
   document.removeEventListener('keydown', onKeydown, { capture: true });
   window.removeEventListener('resize', onResize);

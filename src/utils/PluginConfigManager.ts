@@ -2,6 +2,7 @@ import { Plugin } from 'siyuan';
 import { PluginConfig } from '@/types';
 import { useConfigStore } from '@/stores/config.store';
 import { handleError } from './ErrorHandler';
+import { DEFAULT_CONFIG } from '@/constants';
 
 export class PluginConfigManager {
   private plugin: Plugin;
@@ -23,11 +24,7 @@ export class PluginConfigManager {
     const saved = await this.plugin.loadData('config.json');
     if (saved) {
       const mergedConfig = {
-        defaultProgressGroup: 'incomplete',
-        autoHidePopoverDelay: 5,
-        filteredNotebooks: [],
-        filteredBlocks: [],
-        datetimeFormatPattern: 'yyyy-MM-dd HH:mm',
+        ...DEFAULT_CONFIG,
         ...saved,
       };
       this.getConfigStore().setConfig(mergedConfig);
@@ -55,13 +52,7 @@ export class PluginConfigManager {
     const store = this.configStore;
     if (!store) {
       // 如果 store 还未初始化，返回默认配置
-      return {
-        defaultProgressGroup: 'incomplete',
-        autoHidePopoverDelay: 5,
-        filteredNotebooks: [],
-        filteredBlocks: [],
-        datetimeFormatPattern: 'yyyy-MM-dd HH:mm',
-      };
+      return DEFAULT_CONFIG;
     }
     return store.getConfig();
   }
@@ -72,13 +63,7 @@ export class PluginConfigManager {
   ): void {
     const currentConfig = this.configStore
       ? this.configStore.getConfig()
-      : {
-          defaultProgressGroup: 'incomplete',
-          autoHidePopoverDelay: 3,
-          filteredNotebooks: [],
-          filteredBlocks: [],
-          datetimeFormatPattern: 'yyyy-MM-dd HH:mm',
-        };
+      : DEFAULT_CONFIG;
 
     if (!this.unSavedConfig) {
       this.unSavedConfig = { ...currentConfig };

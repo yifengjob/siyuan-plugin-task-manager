@@ -7,6 +7,9 @@ import App from '@/App.vue';
 import type { App as SiyuanApp } from 'siyuan';
 import { taskService } from '@/services/TaskService';
 
+// 引入 vue-virtual-scroller 样式
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+
 import {
   findTaskElement,
   getClickTargetFromEvent,
@@ -198,6 +201,11 @@ export default class TaskManagerPlugin extends Plugin {
         return;
       }
 
+      // 阻止事件冒泡到 document，防止 Popover 被关闭
+      if (originalEvent) {
+        originalEvent.stopPropagation();
+      }
+
       await this.showTaskPopover(taskElement, originalEvent);
     } catch (error) {
       handleError(error, { context: 'HandleEditorClick' }, false);
@@ -221,6 +229,8 @@ export default class TaskManagerPlugin extends Plugin {
     ]);
 
     const options: PopoverOptions = {
+      placement: 'top',
+      offset: 30,
       taskId: blockId,
       referenceEl: taskElement,
       isEditable,

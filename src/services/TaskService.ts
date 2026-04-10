@@ -6,10 +6,14 @@ import {
   TaskAttrs,
   DataType,
   TaskAttribute,
+  TASK_ATTR_PREFIX,
 } from '@/types';
 import { usePlugin } from '@/utils';
 import { handleError } from '@/utils/ErrorHandler';
 import { toggleTaskCheckbox, isTaskCompleted } from '@/utils/TaskMarkdownUtils';
+
+// 预编译正则表达式,提升性能
+const TASK_ATTR_REGEX = new RegExp(`${TASK_ATTR_PREFIX}(\\w+)="([^"]*)"`, 'g');
 
 export class TaskService {
   constructor(private api: ApiService) {}
@@ -108,10 +112,12 @@ export class TaskService {
     if (!ial) return attrs;
 
     // 解析 ial 字段格式：{: key="value" key2="value2"}
-    const regex = /custom-siyuan-plugin-task-manager-task-(\w+)="([^"]*)"/g;
+    // 使用预编译的正则表达式提升性能
     let match: RegExpExecArray | null;
+    // 重置正则的 lastIndex,确保从头开始匹配
+    TASK_ATTR_REGEX.lastIndex = 0;
 
-    while ((match = regex.exec(ial)) !== null) {
+    while ((match = TASK_ATTR_REGEX.exec(ial)) !== null) {
       const [, key, value] = match;
       switch (key) {
         case 'start':
