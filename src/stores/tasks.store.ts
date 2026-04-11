@@ -38,10 +38,7 @@ export const useTaskStore = defineStore('tasks', () => {
    * 2. 同步到服务器
    * 3. 如果失败则回滚本地状态
    */
-  async function updateTaskAttributes(
-    taskId: string,
-    attrs: Partial<TaskAttrs>
-  ) {
+  async function updateTaskAttributes(taskId: string, attrs: Partial<TaskAttrs>) {
     const taskIndex = tasks.value.findIndex((t) => t.id === taskId);
     if (taskIndex === -1) return;
 
@@ -99,10 +96,7 @@ export const useTaskStore = defineStore('tasks', () => {
       // 更新 markdown 内容（checkbox 状态）
       const markdown = tasks.value[taskIndex].markdown;
       if (markdown) {
-        tasks.value[taskIndex].markdown = toggleTaskCheckbox(
-          markdown,
-          completed
-        );
+        tasks.value[taskIndex].markdown = toggleTaskCheckbox(markdown, completed);
       }
 
       // 同步到服务器

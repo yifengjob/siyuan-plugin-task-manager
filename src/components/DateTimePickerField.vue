@@ -72,8 +72,7 @@ const formats = computed(() => ({
 
 const timeConfig = computed(() => ({
   enableTimePicker: props.type === 'datetime',
-  enableSeconds:
-    props.type.includes('time') && dateTimeFormatPattern.value.includes('ss'),
+  enableSeconds: props.type.includes('time') && dateTimeFormatPattern.value.includes('ss'),
 }));
 
 const actionRow = computed(() => ({
@@ -88,19 +87,14 @@ const actionRow = computed(() => ({
 
 // ============ 主题检测 ============
 const detectDarkTheme = () => {
-  const bgColor = getComputedStyle(document.body)
-    .getPropertyValue('--b3-theme-background')
-    .trim();
+  const bgColor = getComputedStyle(document.body).getPropertyValue('--b3-theme-background').trim();
 
   if (!bgColor) return;
 
   const rgb = bgColor.match(/\d+/g);
   if (rgb && rgb.length >= 3) {
     const brightness =
-      (parseInt(rgb[0]) * 299 +
-        parseInt(rgb[1]) * 587 +
-        parseInt(rgb[2]) * 114) /
-      1000;
+      (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
     isDark.value = brightness < 128;
   }
 };
@@ -266,8 +260,7 @@ watch(localDate, (newVal) => {
   --dp-cell-border-radius: var(--b3-border-radius);
   --dp-common-transition: var(--b3-transition);
   --dp-font-size: var(--b3-font-size);
-  --dp-font-family:
-    var(--b3-font-family-code), var(--b3-font-family), sans-serif;
+  --dp-font-family: var(--b3-font-family-code), var(--b3-font-family), sans-serif;
 }
 
 .task-datetimepicker.is-readonly {

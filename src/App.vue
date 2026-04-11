@@ -19,10 +19,7 @@ const handlePopoverSave = async (attrs: Partial<TaskAttrs>) => {
       attrs.completed !== undefined &&
       popoverOptions.value.attrs?.completed !== attrs.completed
     ) {
-      await taskStore.toggleTaskStatus(
-        popoverOptions.value.taskId,
-        attrs.completed
-      );
+      await taskStore.toggleTaskStatus(popoverOptions.value.taskId, attrs.completed);
     }
     popoverOptions.value = null;
   }
@@ -81,11 +78,7 @@ defineExpose({
 
 <template>
   <div class="task-manager-app">
-    <TaskPopover
-      :options="popoverOptions"
-      @save="handlePopoverSave"
-      @close="handlePopoverClose"
-    />
+    <TaskPopover :options="popoverOptions" @save="handlePopoverSave" @close="handlePopoverClose" />
   </div>
 </template>
 

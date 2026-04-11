@@ -58,8 +58,7 @@ export function useTaskFilter() {
       const rootId = task.rootId;
       if (!map.has(rootId)) {
         map.set(rootId, {
-          rootTitle:
-            task.rootTitle !== '' ? task.rootTitle : plugin.i18n.untitled,
+          rootTitle: task.rootTitle !== '' ? task.rootTitle : plugin.i18n.untitled,
           rootPath: task.hpath,
           boxTitle: task.boxTitle !== '' ? task.boxTitle : plugin.i18n.untitled,
           tasks: [],
@@ -79,9 +78,7 @@ export function useTaskFilter() {
   const completedTasks = computed(
     () => allTasks.value.filter((t) => t.attrs.completed === true).length
   );
-  const incompleteTasks = computed(
-    () => totalTasks.value - completedTasks.value
-  );
+  const incompleteTasks = computed(() => totalTasks.value - completedTasks.value);
 
   /**
    * 切换筛选状态

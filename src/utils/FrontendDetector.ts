@@ -16,16 +16,13 @@ export class FrontendDetector {
     const frontEnd = getFrontend() as SyFrontendTypes;
 
     const isElectron =
-      typeof navigator !== 'undefined' &&
-      navigator.userAgent.toLowerCase().includes('electron');
+      typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron');
 
     return {
       platform: frontEnd,
       isMobile: frontEnd === 'mobile' || frontEnd === 'browser-mobile',
       isBrowser: frontEnd.includes('browser'),
-      isLocal:
-        location.href.includes('127.0.0.1') ||
-        location.href.includes('localhost'),
+      isLocal: location.href.includes('127.0.0.1') || location.href.includes('localhost'),
       isInWindow: location.href.includes('window.html'),
       isElectron,
     };

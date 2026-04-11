@@ -74,9 +74,7 @@ export const extractTargetElement = (node: Node): HTMLElement | null => {
  * @param targetElement - 目标元素
  * @returns 任务块元素或 null
  */
-export const findTaskElement = (
-  targetElement: HTMLElement
-): HTMLElement | null => {
+export const findTaskElement = (targetElement: HTMLElement): HTMLElement | null => {
   const taskElement = targetElement.closest(
     '[data-node-id][data-subtype="t"][data-type="NodeListItem"]'
   );
@@ -84,9 +82,7 @@ export const findTaskElement = (
   return null;
 };
 
-export const findTaskElementFromBlockId = (
-  blockId: string
-): HTMLElement | null => {
+export const findTaskElementFromBlockId = (blockId: string): HTMLElement | null => {
   const elements = document.querySelectorAll(`[data-node-id="${blockId}"]`);
 
   for (const element of elements) {

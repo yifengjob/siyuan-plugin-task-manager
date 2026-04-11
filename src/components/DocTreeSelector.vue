@@ -9,7 +9,6 @@ import {
   setAllExpanded,
   setChildrenChecked,
   type TreeNodeBase,
-  updateAncestorsState,
   updateIndeterminateState,
 } from '@/utils/TreeUtils.ts';
 import { handleError } from '@/utils/ErrorHandler';
@@ -87,10 +86,7 @@ async function loadChildrenWithRetry(
  * @param nodes 需要加载的节点数组
  * @param concurrencyLimit 并发限制数量，默认 5
  */
-async function loadNodesBatch(
-  nodes: TreeNode[],
-  concurrencyLimit: number = 5
-): Promise<void> {
+async function loadNodesBatch(nodes: TreeNode[], concurrencyLimit: number = 5): Promise<void> {
   const queue: TreeNode[] = [...nodes];
   const inProgress = new Set<TreeNode>();
   let processedCount = 0;
@@ -113,9 +109,7 @@ async function loadNodesBatch(
             inProgress.delete(node);
             processedCount++;
             // 更新进度
-            loadingProgress.value = Math.round(
-              (processedCount / totalCount) * 100
-            );
+            loadingProgress.value = Math.round((processedCount / totalCount) * 100);
             loadingStatus.value = `正在加载文档树... (${processedCount}/${totalCount})`;
           })
           .then(() => {
@@ -339,37 +333,25 @@ function isParentChecked(node: TreeNode): boolean {
   }
   return false;
 }
-/**
- * 确保目标节点的祖先节点都已加载（用于更新操作时正确计算半选状态）
- */
-async function ensureAncestorsLoaded(targetId: string, targetType: string) {
-  const path = findPath(treeData.value, targetId, targetType);
-  if (!path) return;
-  for (let i = 0; i < path.length - 1; i++) {
-    const node = path[i];
-    if (node.hasChildren && !node.childrenLoaded) {
-      await loadChildren(node);
-    }
-  }
-}
 
 async function handleNodeUpdate(updatedNode: TreeNode) {
   const target = findNode(treeData.value, updatedNode.id, updatedNode.type);
   if (!target) return;
 
-  await ensureAncestorsLoaded(target.id, target.type);
-
   target.checked = updatedNode.checked;
   target.indeterminate = false;
 
   if (updatedNode.checked) {
+    // 勾选时：加载并勾选所有后代
     await loadAllDescendants(target);
     setChildrenChecked(target, true);
   } else {
+    // 取消勾选时：只需取消当前节点，子节点会自动取消（setChildrenChecked）
     setChildrenChecked(target, false);
   }
 
-  updateAncestorsState(treeData.value, target.id, target.type);
+  // 关键修复：重新计算整棵树的半选状态，确保所有祖先节点状态正确
+  updateIndeterminateState(treeData.value);
 
   await updateConfig();
   treeData.value = [...treeData.value];
@@ -401,11 +383,7 @@ function initCheckedState(
     for (const node of nodes) {
       if (node.type === 'doc') {
         // 只有当父节点没有被勾选时，才应用 filteredBlocks 配置
-        const parentChecked = isParentCheckedInInit(
-          node,
-          filteredNotebooks,
-          filteredBlocks
-        );
+        const parentChecked = isParentCheckedInInit(node, filteredNotebooks, filteredBlocks);
         if (!parentChecked) {
           node.checked = filteredBlocks.includes(node.id);
           node.indeterminate = false;
@@ -493,11 +471,7 @@ async function reinitializeTreeState() {
   await loadFullTree(tree);
 
   // 2. 应用保存的勾选配置
-  initCheckedState(
-    tree,
-    config.filteredNotebooks || [],
-    config.filteredBlocks || []
-  );
+  initCheckedState(tree, config.filteredNotebooks || [], config.filteredBlocks || []);
 
   // 3. 关键修复：如果文档块在配置中，强制其所有子节点为勾选状态
   const enforceBlockChecked = (nodes: TreeNode[]) => {
@@ -543,16 +517,10 @@ export default {
 <template>
   <div class="doc-tree-selector">
     <div class="tree-toolbar">
-      <button
-        class="tree-toolbar-btn b3-button b3-button--outline"
-        @click="expandAll"
-      >
+      <button class="tree-toolbar-btn b3-button b3-button--outline" @click="expandAll">
         {{ i18n.expandAll || '全部展开' }}
       </button>
-      <button
-        class="tree-toolbar-btn b3-button b3-button--outline"
-        @click="collapseAll"
-      >
+      <button class="tree-toolbar-btn b3-button b3-button--outline" @click="collapseAll">
         {{ i18n.collapseAll || '全部折叠' }}
       </button>
     </div>
@@ -561,10 +529,7 @@ export default {
       {{ i18n.loading || '加载中...' }}
       <div v-if="loadingStatus" class="loading-progress">
         <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{ width: loadingProgress + '%' }"
-          ></div>
+          <div class="progress-fill" :style="{ width: loadingProgress + '%' }"></div>
         </div>
         <span class="progress-text">{{ loadingStatus }}</span>
       </div>
@@ -642,11 +607,7 @@ export default {
 
       .progress-fill {
         height: 100%;
-        background: linear-gradient(
-          90deg,
-          var(--b3-theme-primary),
-          var(--b3-theme-primary-light)
-        );
+        background: linear-gradient(90deg, var(--b3-theme-primary), var(--b3-theme-primary-light));
         transition: width 0.3s ease;
       }
     }

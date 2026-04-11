@@ -25,25 +25,10 @@ import {
   IResUpload,
   PandocArgs,
 } from '@/types';
+import { escapeSql } from '@/utils';
 
 export class ApiService {
-  /**
-   * 转义字符串以防止 SQL 注入
-   * @param str 需要转义的字符串
-   * @returns 转义后的字符串
-   */
-  private escapeSql(str: string): string {
-    // SQLite 特殊字符转义
-    return str
-      .replace(/'/g, "''") // 单引号转双单引号
-      .replace(/"/g, '""') // 双引号转双双引号
-      .replace(/\\/g, '\\\\') // 反斜杠转双反斜杠
-      .replace(/\0/g, '\\0'); // 空字符转义
-  }
-  async request(
-    url: string,
-    data: string | Record<string, unknown> | FormData
-  ) {
+  async request(url: string, data: string | Record<string, unknown> | FormData) {
     const response: IWebSocketData = await fetchSyncPost(url, data);
     return response.code === 0 ? response.data : null;
   }
@@ -93,10 +78,7 @@ export class ApiService {
     return this.request(url, data);
   }
 
-  async setNotebookConf(
-    notebook: NotebookId,
-    conf: NotebookConf
-  ): Promise<NotebookConf> {
+  async setNotebookConf(notebook: NotebookId, conf: NotebookConf): Promise<NotebookConf> {
     const data = {
       notebook,
       conf,
@@ -106,11 +88,7 @@ export class ApiService {
   }
 
   // **************************************** File Tree ****************************************
-  async createDocWithMd(
-    notebook: NotebookId,
-    path: string,
-    markdown: string
-  ): Promise<DocumentId> {
+  async createDocWithMd(notebook: NotebookId, path: string, markdown: string): Promise<DocumentId> {
     const data = {
       notebook,
       path,
@@ -120,11 +98,7 @@ export class ApiService {
     return this.request(url, data);
   }
 
-  async renameDoc(
-    notebook: NotebookId,
-    path: string,
-    title: string
-  ): Promise<DocumentId> {
+  async renameDoc(notebook: NotebookId, path: string, title: string): Promise<DocumentId> {
     const data = {
       doc: notebook,
       path,
@@ -179,10 +153,7 @@ export class ApiService {
     return this.request(url, data);
   }
 
-  async listDocsByPath(
-    notebook: NotebookId,
-    path: string
-  ): Promise<IResListDocs> {
+  async listDocsByPath(notebook: NotebookId, path: string): Promise<IResListDocs> {
     const data = {
       notebook,
       path,
@@ -251,11 +222,7 @@ export class ApiService {
     return this.request(url, payload);
   }
 
-  async updateBlock(
-    dataType: DataType,
-    data: string,
-    id: BlockId
-  ): Promise<IResdoOperations[]> {
+  async updateBlock(dataType: DataType, data: string, id: BlockId): Promise<IResdoOperations[]> {
     const payload = {
       dataType,
       data,
@@ -297,19 +264,13 @@ export class ApiService {
 
   async getBlockMarkdown(blockId: string) {
     // ✅ 使用转义防止 SQL 注入
-    const result = await this.sql(
-      `SELECT markdown FROM blocks WHERE id = {{id}}`,
-      { id: blockId }
-    );
+    const result = await this.sql(`SELECT markdown FROM blocks WHERE id = {{id}}`, { id: blockId });
     return (result[0]?.markdown as string) ?? null;
   }
 
   async getBlockCreated(blockId: BlockId) {
     // ✅ 使用转义防止 SQL 注入
-    const result = await this.sql(
-      `SELECT created FROM blocks WHERE id = {{id}}`,
-      { id: blockId }
-    );
+    const result = await this.sql(`SELECT created FROM blocks WHERE id = {{id}}`, { id: blockId });
     return (result[0]?.created as string) ?? null;
   }
 
@@ -377,11 +338,8 @@ export class ApiService {
 
     if (params) {
       for (const [key, value] of Object.entries(params)) {
-        const escapedValue = this.escapeSql(value);
-        finalSql = finalSql.replace(
-          new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-          `'${escapedValue}'`
-        );
+        const escapedValue = escapeSql(value);
+        finalSql = finalSql.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), `'${escapedValue}'`);
       }
     }
     const sqlData = {
@@ -465,10 +423,7 @@ export class ApiService {
     return this.request(url, data);
   }
 
-  async exportResources(
-    paths: string[],
-    name: string
-  ): Promise<IResExportResources> {
+  async exportResources(paths: string[], name: string): Promise<IResExportResources> {
     const data = {
       paths,
       name,

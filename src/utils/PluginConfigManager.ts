@@ -32,8 +32,7 @@ export class PluginConfigManager {
   }
 
   async saveConfig(): Promise<void> {
-    const configToSave =
-      this.unSavedConfig || this.getConfigStore().getConfig();
+    const configToSave = this.unSavedConfig || this.getConfigStore().getConfig();
     await this.plugin.saveData('config.json', configToSave);
     this.getConfigStore().setConfig(configToSave);
     this.unSavedConfig = null;
@@ -57,13 +56,8 @@ export class PluginConfigManager {
     return store.getConfig();
   }
 
-  updateConfig<K extends keyof PluginConfig>(
-    key: K,
-    value: PluginConfig[K]
-  ): void {
-    const currentConfig = this.configStore
-      ? this.configStore.getConfig()
-      : DEFAULT_CONFIG;
+  updateConfig<K extends keyof PluginConfig>(key: K, value: PluginConfig[K]): void {
+    const currentConfig = this.configStore ? this.configStore.getConfig() : DEFAULT_CONFIG;
 
     if (!this.unSavedConfig) {
       this.unSavedConfig = { ...currentConfig };

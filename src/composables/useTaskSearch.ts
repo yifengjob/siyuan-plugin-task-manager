@@ -77,9 +77,7 @@ export function useTaskSearch(allTasks: ComputedRef<Task[]>) {
       return allTasks.value;
     }
 
-    return allTasks.value.filter((task) =>
-      matchesSearch(task, searchQuery.value)
-    );
+    return allTasks.value.filter((task) => matchesSearch(task, searchQuery.value));
   });
 
   /**

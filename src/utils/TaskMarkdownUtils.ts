@@ -18,10 +18,7 @@
  * toggleTaskCheckbox('- [ ] 任务内容', true)  // '- [X] 任务内容'
  * toggleTaskCheckbox('- [X] 任务内容', false) // '- [ ] 任务内容'
  */
-export function toggleTaskCheckbox(
-  markdown: string,
-  completed: boolean
-): string {
+export function toggleTaskCheckbox(markdown: string, completed: boolean): string {
   if (!markdown) return markdown;
 
   if (completed) {

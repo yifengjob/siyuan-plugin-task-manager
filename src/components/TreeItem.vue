@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import { defineProps, defineEmits, ref, watch, nextTick } from 'vue';
+import type { TreeNodeBase } from '@/utils/TreeUtils.ts';
+
+interface TreeNode extends TreeNodeBase {
+  icon?: string;
+  childrenLoaded: boolean;
+  hasChildren: boolean;
+  box?: string;
+  path: string;
+}
 
 const props = defineProps<{
-  node: any;
+  node: TreeNode;
   level: number;
   expanded: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update', node: any): void;
-  (e: 'toggle-expand', node: any): void;
+  (e: 'update', node: TreeNode): void;
+  (e: 'toggle-expand', node: TreeNode): void;
 }>();
 
 const checkbox = ref<HTMLInputElement | null>(null);
@@ -39,11 +48,11 @@ function handleChange(event: Event) {
   emit('update', newNode);
 }
 
-function emitUpdate(node: any) {
+function emitUpdate(node: TreeNode) {
   emit('update', node);
 }
 
-function emitToggleExpand(node: any) {
+function emitToggleExpand(node: TreeNode) {
   emit('toggle-expand', node);
 }
 </script>
@@ -51,11 +60,7 @@ function emitToggleExpand(node: any) {
 <template>
   <div class="tree-item">
     <div class="tree-item-row" :style="{ paddingLeft: level * 16 + 'px' }">
-      <span
-        v-if="node.hasChildren"
-        class="tree-toggle"
-        @click.stop="toggleExpand"
-      >
+      <span v-if="node.hasChildren" class="tree-toggle" @click.stop="toggleExpand">
         <svg
           class="toggle-icon"
           :class="{ expanded: expanded }"
@@ -76,12 +81,7 @@ function emitToggleExpand(node: any) {
       </span>
       <span v-else class="tree-toggle-placeholder"></span>
 
-      <input
-        ref="checkbox"
-        type="checkbox"
-        :checked="node.checked"
-        @change="handleChange"
-      />
+      <input ref="checkbox" type="checkbox" :checked="node.checked" @change="handleChange" />
 
       <span class="tree-item-icon">
         <svg v-if="node.type === 'notebook'" width="16" height="16">
@@ -100,10 +100,7 @@ function emitToggleExpand(node: any) {
       </span>
     </div>
 
-    <div
-      v-if="expanded && node.children && node.children.length > 0"
-      class="tree-children"
-    >
+    <div v-if="expanded && node.children && node.children.length > 0" class="tree-children">
       <TreeItem
         v-for="child in node.children"
         :key="child.id"

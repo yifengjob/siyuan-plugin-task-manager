@@ -25,17 +25,7 @@ export interface NotebookConf {
   dailyNoteTemplatePath: string;
 }
 
-export type BlockType =
-  | 'd'
-  | 's'
-  | 'h'
-  | 't'
-  | 'i'
-  | 'p'
-  | 'f'
-  | 'audio'
-  | 'video'
-  | 'other';
+export type BlockType = 'd' | 's' | 'h' | 't' | 'i' | 'p' | 'f' | 'audio' | 'video' | 'other';
 
 export type BlockSubType =
   | 'd1'

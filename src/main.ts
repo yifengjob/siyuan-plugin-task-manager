@@ -126,10 +126,7 @@ export default class TaskManagerPlugin extends Plugin {
    */
   private setupSettings(): void {
     try {
-      const settingsFactory = new SettingsFactory(
-        this.configManager,
-        this.i18n
-      );
+      const settingsFactory = new SettingsFactory(this.configManager, this.i18n);
       this.setting = settingsFactory.createSetting();
     } catch (error) {
       handleError(error, { context: 'SetupSettings' }, false);
@@ -160,10 +157,7 @@ export default class TaskManagerPlugin extends Plugin {
    * 绑定事件监听器
    */
   private bindEventListeners(): void {
-    this.eventBus.on(
-      'click-editorcontent',
-      this.handleEditorContentClick.bind(this)
-    );
+    this.eventBus.on('click-editorcontent', this.handleEditorContentClick.bind(this));
   }
 
   /**
@@ -180,8 +174,7 @@ export default class TaskManagerPlugin extends Plugin {
     eventData: CustomEvent<{ protyle: IProtyle; event: MouseEvent }>
   ): Promise<void> {
     try {
-      const { targetElement, originalEvent } =
-        getClickTargetFromEvent(eventData);
+      const { targetElement, originalEvent } = getClickTargetFromEvent(eventData);
 
       if (!targetElement) {
         return;

@@ -102,10 +102,7 @@ const hasAnyDateInfo = computed(() => {
         :title="i18n.status"
       >
         <svg class="icon">
-          <use
-            v-if="task.attrs.completed"
-            xlink:href="#iconTaskStatusDue"
-          ></use>
+          <use v-if="task.attrs.completed" xlink:href="#iconTaskStatusDue"></use>
           <use v-else xlink:href="#iconTaskStatusUnDue"></use>
         </svg>
         {{ statusText }}
@@ -138,11 +135,7 @@ const hasAnyDateInfo = computed(() => {
         </svg>
         {{ formatDate(task.attrs.planDue, dateTimeFormatPattern) }}
       </div>
-      <div
-        v-if="task.attrs.actualDue"
-        class="task-date"
-        :title="i18n.actualDue"
-      >
+      <div v-if="task.attrs.actualDue" class="task-date" :title="i18n.actualDue">
         <svg class="icon">
           <use xlink:href="#iconTaskActualDue"></use>
         </svg>

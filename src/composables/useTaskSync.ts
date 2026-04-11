@@ -97,13 +97,7 @@ export function useTaskSync() {
     if (!detail) return;
 
     // 处理文档级别的操作
-    const supportedCommands = [
-      'removeDoc',
-      'create',
-      'moveDoc',
-      'rename',
-      'copyDoc',
-    ];
+    const supportedCommands = ['removeDoc', 'create', 'moveDoc', 'rename', 'copyDoc'];
     if (detail.cmd && supportedCommands.includes(detail.cmd)) {
       await debouncedRefresh();
       return;
@@ -129,9 +123,7 @@ export function useTaskSync() {
           if (
             op.action === 'update' &&
             op.data &&
-            op.data.startsWith(
-              '<div data-marker="*" data-subtype="t" data-node-id="'
-            ) &&
+            op.data.startsWith('<div data-marker="*" data-subtype="t" data-node-id="') &&
             op.data.includes('data-subtype="t"') &&
             op.data.includes('data-type="NodeListItem"')
           ) {
@@ -145,9 +137,7 @@ export function useTaskSync() {
               continue;
             }
 
-            const taskCompleted = op.data.includes(
-              `class="li protyle-task--done"`
-            );
+            const taskCompleted = op.data.includes(`class="li protyle-task--done"`);
 
             // 更新缓存
             processedBlockIds.set(blockId, now);

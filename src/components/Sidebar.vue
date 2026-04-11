@@ -6,8 +6,8 @@ import { usePlugin } from '@/utils';
 import { handleError } from '@/utils/ErrorHandler';
 import { useTaskStore } from '@/stores/tasks.store';
 import { useConfigStore } from '@/stores/config.store';
-import TaskItem from './TaskItem.vue';
-import ErrorBoundary from './ErrorBoundary.vue';
+import TaskItem from '@/components/TaskItem.vue';
+import ErrorBoundary from '@/components/ErrorBoundary.vue';
 import { useTaskFilter } from '@/composables/useTaskFilter';
 import { useTaskSync } from '@/composables/useTaskSync';
 import { useTooltip } from '@/composables/useTooltip';
@@ -36,8 +36,7 @@ const {
 
 const { isLoading, loadError, handleRefresh } = useTaskSync();
 
-const { onMouseEnter: onTitleMouseEnter, onMouseLeave: onTitleMouseLeave } =
-  useTooltip();
+const { onMouseEnter: onTitleMouseEnter, onMouseLeave: onTitleMouseLeave } = useTooltip();
 
 // 扁平化任务列表用于虚拟滚动（带分组标题）
 const mixedItemsList = computed(() => {
@@ -88,9 +87,7 @@ const onTaskClick = async (task: Task, event?: MouseEvent) => {
 
   try {
     // 获取任务的 DOM 元素
-    const taskElement = document.querySelector(
-      `.task-item[data-id="${id}"]`
-    ) as HTMLElement;
+    const taskElement = document.querySelector(`.task-item[data-id="${id}"]`) as HTMLElement;
 
     if (!taskElement) {
       // 如果找不到 DOM 元素，降级为打开文档
@@ -232,9 +229,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
           <svg class="empty-icon">
             <use xlink:href="#iconEmpty"></use>
           </svg>
-          <span v-if="hasActiveSearch">{{
-            i18n.noSearchResults ?? '未找到匹配的任务'
-          }}</span>
+          <span v-if="hasActiveSearch">{{ i18n.noSearchResults ?? '未找到匹配的任务' }}</span>
           <span v-else>{{ i18n.noTasks ?? '暂无任务' }}</span>
         </div>
         <div v-else>
@@ -267,12 +262,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
               <div v-if="item.type === 'header'" class="virtual-scroll-header">
                 <div
                   class="task-doc-title"
-                  @mouseenter="
-                    onTitleMouseEnter(
-                      $event,
-                      '/' + item.boxTitle + item.rootPath
-                    )
-                  "
+                  @mouseenter="onTitleMouseEnter($event, '/' + item.boxTitle + item.rootPath)"
                   @mouseleave="onTitleMouseLeave"
                 >
                   <span class="task-doc-title-text">{{ item.rootTitle }}</span>
@@ -292,20 +282,11 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
           </DynamicScroller>
           <!-- 普通模式 -->
           <div v-else>
-            <div
-              v-for="group in groups"
-              :key="group.rootId"
-              class="task-doc-group"
-            >
+            <div v-for="group in groups" :key="group.rootId" class="task-doc-group">
               <ErrorBoundary :name="`Group-${group.rootId}`">
                 <div
                   class="task-doc-title"
-                  @mouseenter="
-                    onTitleMouseEnter(
-                      $event,
-                      '/' + group.boxTitle + group.rootPath
-                    )
-                  "
+                  @mouseenter="onTitleMouseEnter($event, '/' + group.boxTitle + group.rootPath)"
                   @mouseleave="onTitleMouseLeave"
                 >
                   <span class="task-doc-title-text">{{ group.rootTitle }}</span>
@@ -649,27 +630,43 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     padding: 9px 13px;
     background: linear-gradient(
       135deg,
-      rgba(var(--b3-theme-primary-rgb), 0.08) 0%,
-      rgba(128, 128, 128, 0.04) 100%
+      var(--b3-theme-primary-lightest) 0%,
+      var(--b3-theme-surface-light) 100%
     );
     border-radius: 10px;
     margin-bottom: 10px;
     color: var(--b3-theme-on-surface);
-    border: 1px solid rgba(128, 128, 128, 0.1);
+    border: 1px solid var(--b3-theme-surface-light);
     border-left: 4px solid var(--b3-theme-primary);
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
     //box-shadow: var(--b3-point-shadow);
 
-    &:hover {
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: linear-gradient(
         135deg,
-        rgba(var(--b3-theme-primary-rgb), 0.12) 0%,
-        rgba(128, 128, 128, 0.08) 100%
+        var(--b3-theme-primary-lighter) 0%,
+        var(--b3-theme-surface-light) 100%
       );
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: -1;
+    }
+
+    &:hover {
       transform: translateY(-1px);
-      border-color: rgba(128, 128, 128, 0.15);
-      border-left-color: var(--b3-theme-primary);
+
+      &::before {
+        opacity: 1;
+      }
     }
 
     .task-doc-title-text {

@@ -5,8 +5,7 @@ const DATE_TIME_8_DIGITS = /^\d{8}$/; // 8 位数字格式 (yyyyMMdd)
 const DATE_TIME_12_DIGITS = /^\d{12}$/; // 12 位数字格式 (yyyyMMddHHmm)
 const DATE_TIME_14_DIGITS = /^\d{14}$/; // 14 位数字格式 (yyyyMMddHHmmss)
 const STANDARD_DATE_TIME = /^\d{4}[-/.]\d{2}[-/.]\d{2}[T ]\d{2}:\d{2}:\d{2}$/; // 标准格式
-const STANDARD_DATE_TIME_NO_SECONDS =
-  /^\d{4}[-/.]\d{2}[-/.]\d{2}[T ]\d{2}:\d{2}$/; // 不含秒的标准格式
+const STANDARD_DATE_TIME_NO_SECONDS = /^\d{4}[-/.]\d{2}[-/.]\d{2}[T ]\d{2}:\d{2}$/; // 不含秒的标准格式
 const STANDARD_DATE_ONLY = /^\d{4}[-/.]\d{2}[-/.]\d{2}$/; // 仅日期格式
 
 /**
@@ -15,10 +14,7 @@ const STANDARD_DATE_ONLY = /^\d{4}[-/.]\d{2}[-/.]\d{2}$/; // 仅日期格式
  * @param format 格式字符串，支持：yyyy, MM, dd, HH, mm, ss, SSS(毫秒), E(星期), a(上下午)
  * @returns 格式化后的字符串
  */
-export function formatDateObject(
-  date: Date,
-  format: string = 'yyyy-MM-dd HH:mm:ss'
-): string {
+export function formatDateObject(date: Date, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -89,10 +85,7 @@ export function parseDate(value: string): Date | null {
  *               支持的格式标记：yyyy(年), MM(月), dd(日), HH(时), mm(分), ss(秒), SSS(毫秒), E(星期), a(上下午)
  * @returns 格式化后的字符串，如果输入无效则返回 '—'
  */
-export function formatDate(
-  value: string | null,
-  format: string = 'yyyy-MM-dd HH:mm:ss'
-): string {
+export function formatDate(value: string | null, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
   if (!value) return '—';
 
   let dateObj: Date | null;
@@ -161,10 +154,8 @@ export function getRelativeTime(date: Date | string | null): string {
   // 未来时间
   if (diffMs < 0) {
     if (diffMs > -60 * 1000) return '刚刚';
-    if (diffMs > -60 * 60 * 1000)
-      return `${Math.floor(-diffMs / 60000)} 分钟后`;
-    if (diffMs > -24 * 60 * 60 * 1000)
-      return `${Math.floor(-diffMs / 3600000)} 小时后`;
+    if (diffMs > -60 * 60 * 1000) return `${Math.floor(-diffMs / 60000)} 分钟后`;
+    if (diffMs > -24 * 60 * 60 * 1000) return `${Math.floor(-diffMs / 3600000)} 小时后`;
     return `${Math.floor(-diffMs / 86400000)} 天后`;
   }
 
@@ -259,10 +250,7 @@ export function isDateInRange(
  * @param date2 日期 2
  * @returns 天数差（绝对值）
  */
-export function getDaysBetween(
-  date1: Date | string,
-  date2: Date | string
-): number {
+export function getDaysBetween(date1: Date | string, date2: Date | string): number {
   const d1 = date1 instanceof Date ? date1 : parseDate(date1);
   const d2 = date2 instanceof Date ? date2 : parseDate(date2);
 
@@ -303,9 +291,7 @@ export function getWeekOfYear(date: Date | string | null): number {
   }
 
   const firstDayOfYear = new Date(target.getFullYear(), 0, 1);
-  const pastDays = Math.floor(
-    (target.getTime() - firstDayOfYear.getTime()) / 86400000
-  );
+  const pastDays = Math.floor((target.getTime() - firstDayOfYear.getTime()) / 86400000);
 
   return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
 }
@@ -316,10 +302,7 @@ export function getWeekOfYear(date: Date | string | null): number {
  * @param format 格式字符串，默认 'HH:mm:ss'
  * @returns 格式化后的持续时间
  */
-export function formatDuration(
-  milliseconds: number,
-  format: string = 'HH:mm:ss'
-): string {
+export function formatDuration(milliseconds: number, format: string = 'HH:mm:ss'): string {
   if (milliseconds < 0) milliseconds = 0;
 
   const totalSeconds = Math.floor(milliseconds / 1000);
@@ -363,25 +346,14 @@ export function isValidDate(value: string | null): boolean {
  * @param date2 日期 2
  * @returns 0 表示相同，1 表示 date1 晚于 date2，-1 表示 date1 早于 date2
  */
-export function compareDates(
-  date1: Date | string,
-  date2: Date | string
-): number {
+export function compareDates(date1: Date | string, date2: Date | string): number {
   const d1 = date1 instanceof Date ? date1 : parseDate(date1);
   const d2 = date2 instanceof Date ? date2 : parseDate(date2);
 
   if (!d1 || !d2) return 0;
 
-  const time1 = new Date(
-    d1.getFullYear(),
-    d1.getMonth(),
-    d1.getDate()
-  ).getTime();
-  const time2 = new Date(
-    d2.getFullYear(),
-    d2.getMonth(),
-    d2.getDate()
-  ).getTime();
+  const time1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate()).getTime();
+  const time2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
 
   if (time1 > time2) return 1;
   if (time1 < time2) return -1;

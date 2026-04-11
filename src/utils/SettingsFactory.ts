@@ -86,22 +86,17 @@ export class SettingsFactory {
           {
             label: this.i18n.all,
             value: 'all',
-            checked:
-              this.configManager.getConfig().defaultProgressGroup === 'all',
+            checked: this.configManager.getConfig().defaultProgressGroup === 'all',
           },
           {
             label: this.i18n.completed,
             value: 'completed',
-            checked:
-              this.configManager.getConfig().defaultProgressGroup ===
-              'completed',
+            checked: this.configManager.getConfig().defaultProgressGroup === 'completed',
           },
           {
             label: this.i18n.inProgress,
             value: 'incomplete',
-            checked:
-              this.configManager.getConfig().defaultProgressGroup ===
-              'incomplete',
+            checked: this.configManager.getConfig().defaultProgressGroup === 'incomplete',
           },
         ]),
     });
@@ -185,13 +180,7 @@ export class SettingsFactory {
   private createInput(
     key: string,
     value: string,
-    inputType:
-      | 'text'
-      | 'number'
-      | 'password'
-      | 'email'
-      | 'tel'
-      | 'url' = 'text',
+    inputType: 'text' | 'number' | 'password' | 'email' | 'tel' | 'url' = 'text',
     width: number = 100,
     min: number = -Number.MAX_SAFE_INTEGER,
     max: number = Number.MAX_SAFE_INTEGER,
@@ -230,10 +219,7 @@ export class SettingsFactory {
   /**
    * 单选按钮组创建方法
    */
-  private createRadioGroup(
-    key: keyof PluginConfig,
-    options: RadioGroupOption[]
-  ): HTMLDivElement {
+  private createRadioGroup(key: keyof PluginConfig, options: RadioGroupOption[]): HTMLDivElement {
     const groups = document.createElement('div');
     groups.style.display = 'flex';
     groups.style.flexDirection = 'row';

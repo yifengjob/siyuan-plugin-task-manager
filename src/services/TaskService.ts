@@ -8,8 +8,8 @@ import {
   TaskAttribute,
   TASK_ATTR_PREFIX,
 } from '@/types';
-import { usePlugin } from '@/utils';
-import { handleError } from '@/utils/ErrorHandler';
+import { usePlugin, buildNotInClause } from '@/utils';
+import { handleError, ErrorLevel } from '@/utils/ErrorHandler';
 import { toggleTaskCheckbox, isTaskCompleted } from '@/utils/TaskMarkdownUtils';
 
 // 预编译正则表达式,提升性能
@@ -25,63 +25,103 @@ export class TaskService {
     const filteredNotebooks = plugin.getConfig().filteredNotebooks || [];
     const filteredBlocks = plugin.getConfig().filteredBlocks || [];
 
-    // 构建过滤条件 - 使用参数化占位符
+    // 构建过滤条件
     let whereClause = `WHERE b.type = 'i' AND b.subtype = 't'`;
-    const params: Record<string, string> = {};
 
     // 添加笔记本过滤条件
-    if (filteredNotebooks && filteredNotebooks.length > 0) {
-      const notebookPlaceholders = filteredNotebooks
-        .map((_box, index) => `{{nb${index}}}`)
-        .join(',');
-      whereClause += ` AND b.box NOT IN (${notebookPlaceholders})`;
-
-      // 添加参数
-      filteredNotebooks.forEach((box, index) => {
-        params[`nb${index}`] = box;
-      });
+    if (filteredNotebooks.length > 0) {
+      whereClause += ` AND ${buildNotInClause('b.box', filteredNotebooks)}`;
     }
 
     // 添加块过滤条件
-    if (filteredBlocks && filteredBlocks.length > 0) {
-      const blockPlaceholders = filteredBlocks
-        .map((_blockId, index) => `{{blk${index}}}`)
-        .join(',');
-      whereClause += ` AND b.id NOT IN (${blockPlaceholders})`;
-
-      // 添加参数
-      filteredBlocks.forEach((blockId, index) => {
-        params[`blk${index}`] = blockId;
-      });
+    if (filteredBlocks.length > 0) {
+      whereClause += ` AND ${buildNotInClause('b.id', filteredBlocks)}`;
+      whereClause += ` AND ${buildNotInClause('b.root_id', filteredBlocks)}`;
     }
 
     const sqlStmt = `SELECT b.id,
-                                b.box,
-                                b.hpath,
-                                b.root_id,
-                                b.content,
-                                b.markdown,
-                                b.created,
-                                b.updated,
-                                b.ial,
-                                d.fcontent as root_title
-                         FROM blocks b
-                                  INNER JOIN blocks d ON b.root_id = d.id
-                             ${whereClause}
-                         ORDER BY b.created ASC`;
+                            b.box,
+                            b.path,
+                            b.hpath,
+                            b.root_id,
+                            b.content,
+                            b.markdown,
+                            b.created,
+                            b.updated,
+                            b.ial,
+                            d.fcontent as root_title
+                     FROM blocks b
+                            INNER JOIN blocks d ON b.root_id = d.id
+                       ${whereClause}
+                     ORDER BY b.created ASC`;
 
-    const rows: { [key: string]: string }[] = await this.api.sql(
-      sqlStmt,
-      params
-    );
+    // 执行查询
+    const queryStartTime = performance.now();
+    let rows: { [key: string]: string }[];
+    try {
+      rows = await this.api.sql(sqlStmt);
+    } catch (error) {
+      handleError(error, {
+        action: 'getAllTasks.sql',
+        sql: sqlStmt,
+      });
+      return [];
+    }
 
-    // 性能优化：只在有数据时才获取笔记本列表
+    // 性能监控
+    const queryDuration = performance.now() - queryStartTime;
+    if (queryDuration > 100) {
+      handleError(
+        new Error(`慢查询: ${queryDuration.toFixed(2)}ms`),
+        {
+          action: 'getAllTasks',
+          level: ErrorLevel.WARN,
+          filteredNotebooks: filteredNotebooks.length,
+          filteredBlocks: filteredBlocks.length,
+          resultCount: rows?.length || 0,
+        },
+        false
+      );
+    }
+
     if (!rows || rows.length === 0) return [];
 
+    // 获取笔记本映射
+    const filterStartTime = performance.now();
     const books = await this.api.lsNotebooks();
     const notebookMap = new Map(books.notebooks.map((n) => [n.id, n.name]));
 
-    return rows.map((row: { [key: string]: string }) => ({
+    // JS 层过滤：处理层级关系
+    const filteredNotebookSet = new Set(filteredNotebooks);
+    const filteredBlockSet = new Set(filteredBlocks);
+
+    const filtered = rows.filter((row) => {
+      // 检查路径中是否包含被过滤的笔记本或块
+      for (const boxId of filteredNotebookSet) {
+        if (row.path.includes(boxId)) return false;
+      }
+      for (const blockId of filteredBlockSet) {
+        if (row.path.includes(blockId)) return false;
+      }
+      return true;
+    });
+
+    // 性能监控
+    const filterDuration = performance.now() - filterStartTime;
+    if (filterDuration > 50) {
+      handleError(
+        new Error(`JS过滤慢: ${filterDuration.toFixed(2)}ms`),
+        {
+          action: 'getAllTasks.filter',
+          level: ErrorLevel.WARN,
+          totalRows: rows.length,
+          filteredRows: filtered.length,
+        },
+        false
+      );
+    }
+
+    return filtered.map((row) => ({
       id: row.id,
       box: row.box,
       boxTitle: notebookMap.get(row.box) || '',
@@ -164,12 +204,9 @@ export class TaskService {
   async setTaskAttrs(blockId: string, attrs: Partial<TaskAttrs>) {
     const toSave: Record<string, string> = {};
     if (attrs.start !== undefined) toSave[TaskAttribute.start] = attrs.start;
-    if (attrs.planDue !== undefined)
-      toSave[TaskAttribute.planDue] = attrs.planDue;
-    if (attrs.actualDue !== undefined)
-      toSave[TaskAttribute.actualDue] = attrs.actualDue;
-    if (attrs.priority !== undefined)
-      toSave[TaskAttribute.priority] = attrs.priority;
+    if (attrs.planDue !== undefined) toSave[TaskAttribute.planDue] = attrs.planDue;
+    if (attrs.actualDue !== undefined) toSave[TaskAttribute.actualDue] = attrs.actualDue;
+    if (attrs.priority !== undefined) toSave[TaskAttribute.priority] = attrs.priority;
     if (attrs.notes !== undefined) toSave[TaskAttribute.notes] = attrs.notes;
     if (attrs.completed !== undefined)
       toSave[TaskAttribute.completed] = attrs.completed ? 'true' : '';
@@ -235,9 +272,7 @@ export class TaskService {
 
       // 更新属性
       const completeAttrs = this.buildTaskCompletedAttrs(completed);
-      originalAttrs[TaskAttribute.completed] = completeAttrs.completed
-        ? 'true'
-        : '';
+      originalAttrs[TaskAttribute.completed] = completeAttrs.completed ? 'true' : '';
       originalAttrs[TaskAttribute.actualDue] = completeAttrs.actualDue || '';
 
       await this.api.setBlockAttrs(blockId, originalAttrs);

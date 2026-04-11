@@ -9,10 +9,7 @@ export const useConfigStore = defineStore('config', () => {
     config.value = newConfig;
   }
 
-  function updateConfig<K extends keyof PluginConfig>(
-    key: K,
-    value: PluginConfig[K]
-  ) {
+  function updateConfig<K extends keyof PluginConfig>(key: K, value: PluginConfig[K]) {
     config.value = {
       ...config.value,
       [key]: value,

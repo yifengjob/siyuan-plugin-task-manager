@@ -41,12 +41,7 @@ const handleRetry = () => {
       <p class="error-message">
         {{ error.message }}
       </p>
-      <button
-        class="retry-button b3-button b3-button--outline"
-        @click="handleRetry"
-      >
-        重试
-      </button>
+      <button class="retry-button b3-button b3-button--outline" @click="handleRetry">重试</button>
     </div>
   </div>
   <slot v-else></slot>

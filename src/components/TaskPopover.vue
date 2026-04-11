@@ -14,11 +14,7 @@ import {
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
 import { formatDate } from '@/utils/DateTimeUtils';
 import { useConfigStore } from '@/stores/config.store';
-import {
-  POPOVER_HIDE_DELAY,
-  DATE_PICKER_SELECTORS,
-  SCROLL_CONTAINER_SELECTORS,
-} from '@/constants';
+import { POPOVER_HIDE_DELAY, DATE_PICKER_SELECTORS, SCROLL_CONTAINER_SELECTORS } from '@/constants';
 
 // ============ Props & Emits ============
 const props = defineProps<{
@@ -57,7 +53,10 @@ let cleanupAutoUpdate: (() => void) | null = null;
 let isSwitchingTask = false;
 
 // 浮动 UI 的虚拟参考元素（用于鼠标坐标定位）
-let virtualReference: { getBoundingClientRect: () => DOMRect } | null = null;
+interface VirtualReference {
+  getBoundingClientRect: () => DOMRect;
+}
+let virtualReference: VirtualReference | null = null;
 
 // ============ Form Data ============
 const form = ref({
@@ -107,7 +106,7 @@ const updatePosition = () => {
   if (!containerRef.value || !arrowRef.value) return;
 
   // 确定参考元素：优先使用 referencePoint 创建的虚拟参考，否则使用实际 DOM 元素
-  let reference = referenceElement;
+  let reference: HTMLElement | VirtualReference | null | undefined = referenceElement;
   if (referencePoint && !virtualReference) {
     virtualReference = {
       getBoundingClientRect() {
@@ -115,9 +114,9 @@ const updatePosition = () => {
         return new DOMRect(referencePoint?.x, referencePoint?.y, 0, 0);
       },
     };
-    reference = virtualReference as any;
+    reference = virtualReference;
   } else if (referencePoint && virtualReference) {
-    reference = virtualReference as any;
+    reference = virtualReference;
   }
 
   if (!reference) return;
@@ -164,7 +163,7 @@ const startAutoUpdate = () => {
   if (!referenceElement && !referencePoint) return;
   if (cleanupAutoUpdate) cleanupAutoUpdate();
 
-  let reference = referenceElement;
+  let reference: HTMLElement | VirtualReference | null | undefined = referenceElement;
   if (referencePoint) {
     if (!virtualReference) {
       virtualReference = {
@@ -173,16 +172,13 @@ const startAutoUpdate = () => {
         },
       };
     }
-    reference = virtualReference as any;
+    reference = virtualReference;
   }
 
   if (!reference || !containerRef.value) return;
-  cleanupAutoUpdate = autoUpdate(
-    reference,
-    containerRef.value,
-    updatePosition,
-    { animationFrame: true }
-  );
+  cleanupAutoUpdate = autoUpdate(reference, containerRef.value, updatePosition, {
+    animationFrame: true,
+  });
 };
 
 // 停止自动更新
@@ -229,9 +225,7 @@ const onPopoverMouseLeave = (e: MouseEvent) => {
   const relatedTarget = e.relatedTarget;
   let isInDatePicker = false;
   if (relatedTarget instanceof Element) {
-    isInDatePicker = DATE_PICKER_SELECTORS.some((selector) =>
-      relatedTarget.closest(selector)
-    );
+    isInDatePicker = DATE_PICKER_SELECTORS.some((selector) => relatedTarget.closest(selector));
   }
   if (isInDatePicker) {
     // 如果鼠标移入日期选择器面板，不隐藏
@@ -255,9 +249,7 @@ const onPopoverFocusOut = (_e: FocusEvent) => {
     const activeElement = document.activeElement;
     let isInDatePicker = false;
     if (activeElement instanceof Element) {
-      isInDatePicker = DATE_PICKER_SELECTORS.some((selector) =>
-        activeElement.closest(selector)
-      );
+      isInDatePicker = DATE_PICKER_SELECTORS.some((selector) => activeElement.closest(selector));
     }
     if (isInDatePicker) {
       // 如果焦点在日期选择器面板内，不启动隐藏定时器
@@ -297,10 +289,7 @@ const onDocumentClick = (e: MouseEvent) => {
     return;
   }
 
-  if (
-    !containerRef.value.contains(target) &&
-    !referenceElement.contains(target)
-  ) {
+  if (!containerRef.value.contains(target) && !referenceElement.contains(target)) {
     close();
   }
 };
@@ -331,14 +320,10 @@ const onTextareaInput = () => {
 // ============ Scroll Management ============
 const bindScrollEvents = () => {
   window.addEventListener('scroll', onScroll, { passive: true });
-  const scrollContainers = document.querySelectorAll(
-    SCROLL_CONTAINER_SELECTORS.join(', ')
-  );
+  const scrollContainers = document.querySelectorAll(SCROLL_CONTAINER_SELECTORS.join(', '));
   scrollContainers.forEach((container) => {
     container.addEventListener('scroll', onScroll, { passive: true });
-    scrollListeners.push(() =>
-      container.removeEventListener('scroll', onScroll)
-    );
+    scrollListeners.push(() => container.removeEventListener('scroll', onScroll));
   });
 };
 
