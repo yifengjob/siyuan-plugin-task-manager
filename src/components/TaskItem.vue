@@ -152,13 +152,11 @@ const hasAnyDateInfo = computed(() => {
   margin-bottom: 8px;
   border-radius: 10px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(128, 128, 128, 0.08);
-  //box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--b3-point-shadow);
 
   &:hover {
     background: var(--b3-theme-background);
     transform: translateY(-1px);
-    border-color: rgba(128, 128, 128, 0.15);
   }
 
   &.completed {

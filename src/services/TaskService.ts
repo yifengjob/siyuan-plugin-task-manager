@@ -8,7 +8,7 @@ import {
   TaskAttribute,
   TASK_ATTR_PREFIX,
 } from '@/types';
-import { usePlugin, buildNotInClause } from '@/utils';
+import { usePlugin, buildNotInClause, AppError } from '@/utils';
 import { handleError, ErrorLevel } from '@/utils/ErrorHandler';
 import { toggleTaskCheckbox, isTaskCompleted } from '@/utils/TaskMarkdownUtils';
 
@@ -72,7 +72,7 @@ export class TaskService {
     const queryDuration = performance.now() - queryStartTime;
     if (queryDuration > 100) {
       handleError(
-        new Error(`慢查询: ${queryDuration.toFixed(2)}ms`),
+        new AppError(`慢查询: ${queryDuration.toFixed(2)}ms`),
         {
           action: 'getAllTasks',
           level: ErrorLevel.WARN,
@@ -110,7 +110,7 @@ export class TaskService {
     const filterDuration = performance.now() - filterStartTime;
     if (filterDuration > 50) {
       handleError(
-        new Error(`JS过滤慢: ${filterDuration.toFixed(2)}ms`),
+        new AppError(`JS过滤慢: ${filterDuration.toFixed(2)}ms`),
         {
           action: 'getAllTasks.filter',
           level: ErrorLevel.WARN,

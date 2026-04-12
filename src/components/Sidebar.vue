@@ -536,7 +536,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     }
   }
 
-  // 内容区域（可滚动）
+  /* 内容区域（可滚动）*/
   .task-sidebar-content {
     flex: 1;
     overflow-y: auto;
@@ -544,13 +544,13 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     padding: 10px;
     scroll-behavior: smooth;
 
-    // 虚拟滚动模式
+    /* 虚拟滚动模式 */
     &.virtual-scroll-enabled {
       padding: 0; // 移除默认 padding
       overflow-x: visible !important; // 允许横向溢出，显示 box-shadow
     }
 
-    // 自定义滚动条
+    /* 自定义滚动条 */
     &::-webkit-scrollbar {
       width: 6px;
     }
@@ -636,13 +636,12 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     border-radius: 10px;
     margin-bottom: 10px;
     color: var(--b3-theme-on-surface);
-    border: 1px solid var(--b3-theme-surface-light);
     border-left: 4px solid var(--b3-theme-primary);
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    //box-shadow: var(--b3-point-shadow);
+    box-shadow: var(--b3-point-shadow);
 
     &::before {
       content: '';
@@ -662,7 +661,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     }
 
     &:hover {
-      transform: translateY(-1px);
+      transform: scale(1.02);
 
       &::before {
         opacity: 1;
@@ -820,24 +819,29 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
   }
 }
 
-// 1. 容器级别：移除 padding，让 .virtual-scroller 内部控制
+/* 1. 容器级别：移除 padding，让 .virtual-scroller 内部控制 */
 .task-sidebar-content.virtual-scroll-enabled {
   padding: 0 !important;
 }
 
-// 2. 虚拟滚动容器：设置 padding
+/* 2. 虚拟滚动容器：设置 padding */
 .task-sidebar-content.virtual-scroll-enabled .virtual-scroller {
   width: 100% !important;
   height: 100% !important;
-  padding: 10px !important;
+  /* 移除左右 padding，改用内部元素的 margin 来控制间距 */
+  padding: 10px 0 !important;
   box-sizing: border-box !important;
+  /* 确保不裁剪子元素 */
+  overflow: visible !important;
 }
 
-// 3. 修复 margin 塌陷 + 设置间距
+/* 3. 修复 margin 塌陷 + 设置间距 */
 .task-sidebar-content.virtual-scroll-enabled {
   .vue-recycle-scroller__item-view > div[data-index] {
-    padding: 1px 0; // 防止 margin 塌陷
+    /* 使用 padding 来创建左右间距，而不是依赖父容器的 padding */
+    padding: 1px 10px; /* 上下1px防止margin塌陷，左右10px创建间距 */
     width: 100%;
+    box-sizing: border-box;
 
     .virtual-scroll-header {
       margin: 0 0 10px 0 !important;
@@ -854,7 +858,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
 }
 </style>
 <style lang="scss">
-// 全局 Tooltip 样式（不在 scoped 内，以便在 body 中生效）
+/* 全局 Tooltip 样式（不在 scoped 内，以便在 body 中生效）*/
 .task-sidebar-tooltip {
   position: absolute;
   background: var(--b3-theme-background);
@@ -882,5 +886,15 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
   transform: rotate(45deg);
   pointer-events: none;
   z-index: -1;
+}
+
+// 修复虚拟滚动中间层容器的 overflow 问题，让阴影正常显示
+.task-sidebar-content.virtual-scroll-enabled {
+  .vue-recycle-scroller__item-view {
+    // 允许内容溢出，显示阴影
+    overflow: visible !important;
+    // 宽度充满
+    width: 100% !important;
+  }
 }
 </style>

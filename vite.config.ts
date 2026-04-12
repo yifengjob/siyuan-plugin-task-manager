@@ -67,6 +67,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     },
 
     plugins: [
+      // vue({ vapor: true }), // vue 3.6 以上版本已支持
       vue(),
       viteStaticCopy({
         targets: [
