@@ -1,10 +1,12 @@
 // src/utils/SettingsFactory.ts
 import { Setting } from 'siyuan';
-import { PluginConfigManager } from './PluginConfigManager';
-import { I18n, PluginConfig, RadioGroupOption } from '@/types';
-import { createApp, App } from 'vue';
+import { App, createApp } from 'vue';
+
 import DocTreeSelector from '@/components/DocTreeSelector.vue';
 import { useTaskStore } from '@/stores/tasks.store';
+import { I18n, PluginConfig, RadioGroupOption } from '@/types';
+
+import { PluginConfigManager } from './PluginConfigManager';
 
 /**
  * 插件设置工厂类
@@ -18,9 +20,9 @@ import { useTaskStore } from '@/stores/tasks.store';
  * - 任务过滤(文档树选择)
  */
 export class SettingsFactory {
-  private setting!: Setting;
   private readonly configManager: PluginConfigManager;
   private readonly i18n: I18n;
+  private setting!: Setting;
   private vueApps: Map<HTMLElement, App> = new Map(); // 存储容器与应用的映射
 
   constructor(configManager: PluginConfigManager, i18n: I18n) {
@@ -57,9 +59,6 @@ export class SettingsFactory {
    */
   private addAutoHidePopoverDelaySetting(): void {
     this.setting.addItem({
-      title: this.i18n.autoHidePopoverDelayTitle,
-      description: this.i18n.autoHidePopoverDelayDesc,
-      direction: 'row',
       createActionElement: () =>
         this.createInput(
           'autoHidePopoverDelay',
@@ -70,6 +69,24 @@ export class SettingsFactory {
           50,
           1
         ),
+      description: this.i18n.autoHidePopoverDelayDesc,
+      direction: 'row',
+      title: this.i18n.autoHidePopoverDelayTitle,
+    });
+  }
+
+  private addDatetimeFormatPatternSetting(): void {
+    this.setting.addItem({
+      createActionElement: () =>
+        this.createInput(
+          'datetimeFormatPattern',
+          this.configManager.getConfig().datetimeFormatPattern,
+          'text',
+          200
+        ),
+      description: this.i18n.datetimeFormatPatternDesc,
+      direction: 'row',
+      title: this.i18n.datetimeFormatPatternTitle,
     });
   }
 
@@ -78,27 +95,27 @@ export class SettingsFactory {
    */
   private addDefaultProgressGroupSetting(): void {
     this.setting.addItem({
-      title: this.i18n.defaultProgressGroupTitle,
-      description: this.i18n.defaultProgressGroupDesc,
-      direction: 'row',
       createActionElement: () =>
         this.createRadioGroup('defaultProgressGroup', [
           {
+            checked: this.configManager.getConfig().defaultProgressGroup === 'all',
             label: this.i18n.all,
             value: 'all',
-            checked: this.configManager.getConfig().defaultProgressGroup === 'all',
           },
           {
+            checked: this.configManager.getConfig().defaultProgressGroup === 'completed',
             label: this.i18n.completed,
             value: 'completed',
-            checked: this.configManager.getConfig().defaultProgressGroup === 'completed',
           },
           {
+            checked: this.configManager.getConfig().defaultProgressGroup === 'incomplete',
             label: this.i18n.inProgress,
             value: 'incomplete',
-            checked: this.configManager.getConfig().defaultProgressGroup === 'incomplete',
           },
         ]),
+      description: this.i18n.defaultProgressGroupDesc,
+      direction: 'row',
+      title: this.i18n.defaultProgressGroupTitle,
     });
   }
 
@@ -108,9 +125,6 @@ export class SettingsFactory {
    */
   private addTaskFilterSetting(): void {
     this.setting.addItem({
-      title: this.i18n.filterSettingsTitle,
-      description: this.i18n.filterSettingsDesc,
-      direction: 'row',
       createActionElement: () => {
         const container = document.createElement('div');
         container.className = 'task-filter-tree-container';
@@ -124,21 +138,9 @@ export class SettingsFactory {
         // 注意：不需要额外的 MutationObserver，因为 destroyCallback 会清理所有挂载的应用
         return container;
       },
-    });
-  }
-
-  private addDatetimeFormatPatternSetting(): void {
-    this.setting.addItem({
-      title: this.i18n.datetimeFormatPatternTitle,
-      description: this.i18n.datetimeFormatPatternDesc,
+      description: this.i18n.filterSettingsDesc,
       direction: 'row',
-      createActionElement: () =>
-        this.createInput(
-          'datetimeFormatPattern',
-          this.configManager.getConfig().datetimeFormatPattern,
-          'text',
-          200
-        ),
+      title: this.i18n.filterSettingsTitle,
     });
   }
 
@@ -147,9 +149,6 @@ export class SettingsFactory {
    */
   private addVirtualScrollThresholdSetting(): void {
     this.setting.addItem({
-      title: this.i18n.virtualScrollThresholdTitle,
-      description: this.i18n.virtualScrollThresholdDesc,
-      direction: 'row',
       createActionElement: () =>
         this.createInput(
           'virtualScrollThreshold',
@@ -160,18 +159,10 @@ export class SettingsFactory {
           1000,
           5
         ),
+      description: this.i18n.virtualScrollThresholdDesc,
+      direction: 'row',
+      title: this.i18n.virtualScrollThresholdTitle,
     });
-  }
-
-  /**
-   * 销毁所有已挂载的 Vue 应用（用于设置面板销毁时的清理）
-   */
-  private destroyAllVueApps(): void {
-    for (const [container, app] of this.vueApps.entries()) {
-      app?.unmount();
-      container?.remove();
-    }
-    this.vueApps.clear();
   }
 
   /**
@@ -180,7 +171,7 @@ export class SettingsFactory {
   private createInput(
     key: string,
     value: string,
-    inputType: 'text' | 'number' | 'password' | 'email' | 'tel' | 'url' = 'text',
+    inputType: 'email' | 'number' | 'password' | 'tel' | 'text' | 'url' = 'text',
     width: number = 100,
     min: number = -Number.MAX_SAFE_INTEGER,
     max: number = Number.MAX_SAFE_INTEGER,
@@ -199,7 +190,7 @@ export class SettingsFactory {
     }
 
     input.addEventListener('change', () => {
-      let finalValue: string | number = input.value;
+      let finalValue: number | string = input.value;
 
       if (inputType === 'number') {
         const parsedValue = parseInt(input.value, 10);
@@ -247,5 +238,16 @@ export class SettingsFactory {
       groups.appendChild(group);
     });
     return groups;
+  }
+
+  /**
+   * 销毁所有已挂载的 Vue 应用（用于设置面板销毁时的清理）
+   */
+  private destroyAllVueApps(): void {
+    for (const [container, app] of this.vueApps.entries()) {
+      app?.unmount();
+      container?.remove();
+    }
+    this.vueApps.clear();
   }
 }

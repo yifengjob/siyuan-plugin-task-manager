@@ -1,8 +1,11 @@
 import { computed, ref } from 'vue';
+
 import type { Task } from '@/types';
+
+import { FILTER_STATUS } from '@/constants';
 import { useTaskStore } from '@/stores/tasks.store';
 import { usePlugin } from '@/utils';
-import { FILTER_STATUS } from '@/constants';
+
 import { useTaskSearch } from './useTaskSearch';
 
 /**
@@ -21,12 +24,12 @@ export function useTaskFilter() {
 
   // 集成搜索功能
   const {
-    searchQuery,
-    setSearchQuery,
     clearSearch,
-    searchedTasks,
     hasActiveSearch,
+    searchedTasks,
+    searchQuery,
     searchResultCount,
+    setSearchQuery,
   } = useTaskSearch(allTasks);
 
   // 根据筛选条件过滤任务（在搜索结果基础上）
@@ -47,9 +50,9 @@ export function useTaskFilter() {
     const map = new Map<
       string,
       {
-        rootTitle: string;
-        rootPath: string;
         boxTitle: string;
+        rootPath: string;
+        rootTitle: string;
         tasks: Task[];
       }
     >();
@@ -58,9 +61,9 @@ export function useTaskFilter() {
       const rootId = task.rootId;
       if (!map.has(rootId)) {
         map.set(rootId, {
-          rootTitle: task.rootTitle !== '' ? task.rootTitle : plugin.i18n.untitled,
-          rootPath: task.hpath,
           boxTitle: task.boxTitle !== '' ? task.boxTitle : plugin.i18n.untitled,
+          rootPath: task.hpath,
+          rootTitle: task.rootTitle !== '' ? task.rootTitle : plugin.i18n.untitled,
           tasks: [],
         });
       }
@@ -88,19 +91,19 @@ export function useTaskFilter() {
   }
 
   return {
-    filterStatus,
     allTasks,
-    filteredTasks,
-    groups,
-    totalTasks,
+    clearSearch,
     completedTasks,
+    filteredTasks,
+    filterStatus,
+    groups,
+    hasActiveSearch,
     incompleteTasks,
-    setFilterStatus,
     // 搜索相关
     searchQuery,
-    setSearchQuery,
-    clearSearch,
-    hasActiveSearch,
     searchResultCount,
+    setFilterStatus,
+    setSearchQuery,
+    totalTasks,
   };
 }

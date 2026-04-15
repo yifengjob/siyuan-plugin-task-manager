@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, watch, nextTick } from 'vue';
+import { nextTick, ref, watch } from 'vue';
+
 import type { TreeNodeBase } from '@/utils/TreeUtils.ts';
 
 interface TreeNode extends TreeNodeBase {
-  icon?: string;
+  box?: string;
   childrenLoaded: boolean;
   hasChildren: boolean;
-  box?: string;
+  icon?: string;
   path: string;
 }
 
 const props = defineProps<{
-  node: TreeNode;
-  level: number;
   expanded: boolean;
+  level: number;
+  node: TreeNode;
 }>();
 
 const emit = defineEmits<{
@@ -34,8 +35,12 @@ watch(
   { immediate: true }
 );
 
-function toggleExpand() {
-  emit('toggle-expand', props.node);
+function emitToggleExpand(node: TreeNode) {
+  emit('toggle-expand', node);
+}
+
+function emitUpdate(node: TreeNode) {
+  emit('update', node);
 }
 
 function handleChange(event: Event) {
@@ -48,12 +53,8 @@ function handleChange(event: Event) {
   emit('update', newNode);
 }
 
-function emitUpdate(node: TreeNode) {
-  emit('update', node);
-}
-
-function emitToggleExpand(node: TreeNode) {
-  emit('toggle-expand', node);
+function toggleExpand() {
+  emit('toggle-expand', props.node);
 }
 </script>
 

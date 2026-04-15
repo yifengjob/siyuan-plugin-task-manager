@@ -1,30 +1,33 @@
-import type { AppComponent, PluginConfig, PopoverOptions } from '@/types';
-import { createPinia } from 'pinia';
-import { IObject, IProtyle, Plugin } from 'siyuan';
-import { createApp } from 'vue';
-import PluginInfoString from '@/../plugin.json';
-import App from '@/App.vue';
-import type { App as SiyuanApp } from 'siyuan';
-import { taskService } from '@/services/TaskService';
-
 // 引入 vue-virtual-scroller 样式
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
+import '@/assets/index.scss';
+
+import type { App as SiyuanApp } from 'siyuan';
+
+import { createPinia } from 'pinia';
+import { IObject, IProtyle, Plugin } from 'siyuan';
+import { createApp } from 'vue';
+
+import type { AppComponent, PluginConfig, PopoverOptions } from '@/types';
+
+import PluginInfoString from '@/../plugin.json';
+import App from '@/App.vue';
+import { taskService } from '@/services/TaskService';
 import {
   findTaskElement,
-  getClickTargetFromEvent,
-  isElementEditable,
   FrontendDetector,
+  getClickTargetFromEvent,
+  handleError,
+  isElementEditable,
   PluginConfigManager,
   setPlugin,
   SettingsFactory,
-  handleError,
 } from '@/utils';
-import '@/assets/index.scss';
 
 interface PluginInfo {
-  version: string;
   author: string;
+  version: string;
 }
 
 const PLUGIN_INFO: PluginInfo = (() => {
@@ -33,8 +36,8 @@ const PLUGIN_INFO: PluginInfo = (() => {
   } catch (error) {
     handleError(error, { context: 'PluginInfoParse' }, false);
     return {
-      version: '',
       author: '',
+      version: '',
     };
   }
 })();
@@ -43,21 +46,28 @@ const PLUGIN_INFO: PluginInfo = (() => {
  * 插件主类
  */
 export default class TaskManagerPlugin extends Plugin {
-  private readonly configManager: PluginConfigManager;
-  private vueApp: ReturnType<typeof createApp> | null = null;
-  private mountPoint: HTMLElement | null = null;
-  private appComponent: AppComponent | null = null;
-
-  public readonly version: string;
   public readonly author: string;
   public readonly frontendInfo: ReturnType<typeof FrontendDetector.detect>;
+  public readonly version: string;
+  private appComponent: AppComponent | null = null;
 
-  constructor(options: { app: SiyuanApp; name: string; i18n: IObject }) {
+  private readonly configManager: PluginConfigManager;
+  private mountPoint: HTMLElement | null = null;
+  private vueApp: null | ReturnType<typeof createApp> = null;
+
+  constructor(options: { app: SiyuanApp; i18n: IObject; name: string }) {
     super(options);
     this.configManager = new PluginConfigManager(this);
     this.version = PLUGIN_INFO.version;
     this.author = PLUGIN_INFO.author;
     this.frontendInfo = FrontendDetector.detect();
+  }
+
+  /**
+   * 获取插件配置
+   */
+  getConfig(): PluginConfig {
+    return this.configManager.getConfig();
   }
 
   /**
@@ -83,6 +93,15 @@ export default class TaskManagerPlugin extends Plugin {
   }
 
   /**
+   * 插件卸载时的清理入口
+   *
+   * 调用 cleanup 方法释放所有运行时资源
+   */
+  onunload(): void {
+    this.cleanup();
+  }
+
+  /**
    * 卸载插件时的清理操作
    *
    * 执行以下清理步骤：
@@ -102,58 +121,6 @@ export default class TaskManagerPlugin extends Plugin {
   }
 
   /**
-   * 插件卸载时的清理入口
-   *
-   * 调用 cleanup 方法释放所有运行时资源
-   */
-  onunload(): void {
-    this.cleanup();
-  }
-
-  /**
-   * 加载插件配置
-   */
-  private async loadPluginConfig(): Promise<void> {
-    try {
-      await this.configManager.loadConfig();
-    } catch (error) {
-      handleError(error, { context: 'LoadPluginConfig' }, false);
-    }
-  }
-
-  /**
-   * 设置插件配置界面
-   */
-  private setupSettings(): void {
-    try {
-      const settingsFactory = new SettingsFactory(this.configManager, this.i18n);
-      this.setting = settingsFactory.createSetting();
-    } catch (error) {
-      handleError(error, { context: 'SetupSettings' }, false);
-    }
-  }
-
-  /**
-   * 挂载 Vue 应用
-   */
-  private async mountVueApp(): Promise<void> {
-    try {
-      this.mountPoint = document.createElement('div');
-      this.mountPoint.classList.add('plugin-boilerplate-vite-vue-app');
-
-      const pinia = createPinia();
-      this.vueApp = createApp(App);
-      this.vueApp.use(pinia);
-
-      this.appComponent = this.vueApp.mount(this.mountPoint) as AppComponent;
-      document.body.appendChild(this.mountPoint);
-    } catch (error) {
-      handleError(error, { context: 'MountVueApp' });
-      throw error;
-    }
-  }
-
-  /**
    * 绑定事件监听器
    */
   private bindEventListeners(): void {
@@ -161,20 +128,31 @@ export default class TaskManagerPlugin extends Plugin {
   }
 
   /**
-   * 解绑事件监听器
+   * 清理资源
    */
-  private unbindEventListeners(): void {
-    this.eventBus.off('click-editorcontent', this.handleEditorContentClick);
+  private cleanup(): void {
+    try {
+      this.vueApp?.unmount();
+      this.vueApp = null;
+
+      this.mountPoint?.remove();
+      this.mountPoint = null;
+
+      this.appComponent = null;
+      this.unbindEventListeners();
+    } catch (error) {
+      handleError(error, { context: 'Cleanup' }, false);
+    }
   }
 
   /**
    * 处理编辑器内容点击事件
    */
   private async handleEditorContentClick(
-    eventData: CustomEvent<{ protyle: IProtyle; event: MouseEvent }>
+    eventData: CustomEvent<{ event: MouseEvent; protyle: IProtyle }>
   ): Promise<void> {
     try {
-      const { targetElement, originalEvent } = getClickTargetFromEvent(eventData);
+      const { originalEvent, targetElement } = getClickTargetFromEvent(eventData);
 
       if (!targetElement) {
         return;
@@ -206,6 +184,49 @@ export default class TaskManagerPlugin extends Plugin {
   }
 
   /**
+   * 加载插件配置
+   */
+  private async loadPluginConfig(): Promise<void> {
+    try {
+      await this.configManager.loadConfig();
+    } catch (error) {
+      handleError(error, { context: 'LoadPluginConfig' }, false);
+    }
+  }
+
+  /**
+   * 挂载 Vue 应用
+   */
+  private async mountVueApp(): Promise<void> {
+    try {
+      this.mountPoint = document.createElement('div');
+      this.mountPoint.classList.add('plugin-boilerplate-vite-vue-app');
+
+      const pinia = createPinia();
+      this.vueApp = createApp(App);
+      this.vueApp.use(pinia);
+
+      this.appComponent = this.vueApp.mount(this.mountPoint) as AppComponent;
+      document.body.appendChild(this.mountPoint);
+    } catch (error) {
+      handleError(error, { context: 'MountVueApp' });
+      throw error;
+    }
+  }
+
+  /**
+   * 设置插件配置界面
+   */
+  private setupSettings(): void {
+    try {
+      const settingsFactory = new SettingsFactory(this.configManager, this.i18n);
+      this.setting = settingsFactory.createSetting();
+    } catch (error) {
+      handleError(error, { context: 'SetupSettings' }, false);
+    }
+  }
+
+  /**
    * 显示任务 Popover
    */
   private async showTaskPopover(
@@ -222,19 +243,19 @@ export default class TaskManagerPlugin extends Plugin {
     ]);
 
     const options: PopoverOptions = {
-      placement: 'top',
-      offset: 30,
-      taskId: blockId,
-      referenceEl: taskElement,
-      isEditable,
       attrs,
       createdDate,
+      isEditable,
+      offset: 30,
+      placement: 'top',
+      referenceEl: taskElement,
       referencePoint: originalEvent
         ? {
             x: originalEvent.clientX,
             y: originalEvent.clientY,
           }
         : undefined,
+      taskId: blockId,
     };
 
     if (this.appComponent && 'showPopover' in this.appComponent) {
@@ -243,27 +264,9 @@ export default class TaskManagerPlugin extends Plugin {
   }
 
   /**
-   * 清理资源
+   * 解绑事件监听器
    */
-  private cleanup(): void {
-    try {
-      this.vueApp?.unmount();
-      this.vueApp = null;
-
-      this.mountPoint?.remove();
-      this.mountPoint = null;
-
-      this.appComponent = null;
-      this.unbindEventListeners();
-    } catch (error) {
-      handleError(error, { context: 'Cleanup' }, false);
-    }
-  }
-
-  /**
-   * 获取插件配置
-   */
-  getConfig(): PluginConfig {
-    return this.configManager.getConfig();
+  private unbindEventListeners(): void {
+    this.eventBus.off('click-editorcontent', this.handleEditorContentClick);
   }
 }

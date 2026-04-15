@@ -1,21 +1,21 @@
-import TaskManagerPlugin from '@/main';
+import iconEmpty from '@/assets/icons/clipboard.svg?raw';
+import iconDocument from '@/assets/icons/document.svg?raw';
+import iconError from '@/assets/icons/error.svg?raw';
+import iconNotebook from '@/assets/icons/notebook.svg?raw';
 import iconTaskActualDue from '@/assets/icons/task-actual-due.svg?raw';
 import iconTaskBoard from '@/assets/icons/task-board.svg?raw';
 import iconTaskCreated from '@/assets/icons/task-created.svg?raw';
 import iconTaskNotes from '@/assets/icons/task-notes.svg?raw';
 import iconTaskPlanDue from '@/assets/icons/task-plan-due.svg?raw';
-import iconTaskPriority from '@/assets/icons/task-priority.svg?raw';
 import iconTaskPriorityHigh from '@/assets/icons/task-priority-high.svg?raw';
 import iconTaskPriorityLow from '@/assets/icons/task-priority-low.svg?raw';
 import iconTaskPriorityMedium from '@/assets/icons/task-priority-medium.svg?raw';
 import iconTaskPriorityNormal from '@/assets/icons/task-priority-normal.svg?raw';
+import iconTaskPriority from '@/assets/icons/task-priority.svg?raw';
 import iconTaskStart from '@/assets/icons/task-start.svg?raw';
 import iconTaskStatusDue from '@/assets/icons/task-status-due.svg?raw';
 import iconTaskStatusUnDue from '@/assets/icons/task-status-un-due.svg?raw';
-import iconNotebook from '@/assets/icons/notebook.svg?raw';
-import iconDocument from '@/assets/icons/document.svg?raw';
-import iconEmpty from '@/assets/icons/clipboard.svg?raw';
-import iconError from '@/assets/icons/error.svg?raw';
+import TaskManagerPlugin from '@/main';
 
 interface IconDefinition {
   content: string;

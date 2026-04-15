@@ -57,7 +57,7 @@ export const TOOLTIP_MAX_WIDTH = 400;
 /**
  * 侧边栏默认宽度（像素）
  */
-export const SIDEBAR_DEFAULT_WIDTH = 360;
+export const SIDEBAR_DEFAULT_WIDTH = 400;
 
 // ============ 虚拟滚动相关常量 ============
 
@@ -112,9 +112,9 @@ export const SQL_PARAM_SUFFIX = '}}';
  */
 export const TASK_PRIORITY = {
   HIGH: 'high',
+  LOW: 'low',
   MEDIUM: 'medium',
   NORMAL: 'normal',
-  LOW: 'low',
 } as const;
 
 /**
@@ -142,11 +142,11 @@ export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS];
  */
 export const ERROR_MESSAGES = {
   LOAD_TASKS_FAILED: '加载任务失败，请刷新重试',
-  REFRESH_FAILED: '刷新失败，请稍后重试',
-  UPDATE_TASK_FAILED: '任务更新失败',
-  SAVE_CONFIG_FAILED: '配置保存失败',
   NETWORK_ERROR: '网络错误，请检查连接',
+  REFRESH_FAILED: '刷新失败，请稍后重试',
+  SAVE_CONFIG_FAILED: '配置保存失败',
   UNKNOWN_ERROR: '发生未知错误',
+  UPDATE_TASK_FAILED: '任务更新失败',
 } as const;
 
 // ============ 成功消息常量 ============
@@ -161,11 +161,11 @@ export const SUCCESS_MESSAGES = {
 
 // ============ 默认配置常量 ============
 export const DEFAULT_CONFIG: PluginConfig = {
-  defaultProgressGroup: FILTER_STATUS.INCOMPLETE,
   autoHidePopoverDelay: DEFAULT_AUTO_HIDE_DELAY,
-  filteredNotebooks: [],
-  filteredBlocks: [],
   datetimeFormatPattern: DEFAULT_DATETIME_FORMAT,
+  defaultProgressGroup: FILTER_STATUS.INCOMPLETE,
+  filteredBlocks: [],
+  filteredNotebooks: [],
   virtualScrollThreshold: VIRTUAL_SCROLL_THRESHOLD,
 };
 

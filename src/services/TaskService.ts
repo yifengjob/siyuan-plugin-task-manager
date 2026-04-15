@@ -2,21 +2,38 @@ import { apiService, ApiService } from '@/services/ApiService';
 import {
   BlockId,
   BlockInfo,
-  Task,
-  TaskAttrs,
   DataType,
-  TaskAttribute,
+  Task,
   TASK_ATTR_PREFIX,
+  TaskAttribute,
+  TaskAttrs,
 } from '@/types';
-import { usePlugin, buildNotInClause, AppError } from '@/utils';
-import { handleError, ErrorLevel } from '@/utils/ErrorHandler';
-import { toggleTaskCheckbox, isTaskCompleted } from '@/utils/TaskMarkdownUtils';
+import { AppError, buildNotInClause, parseDate, usePlugin } from '@/utils';
+import { ErrorLevel, handleError } from '@/utils/ErrorHandler';
+import { isTaskCompleted, toggleTaskCheckbox } from '@/utils/TaskMarkdownUtils';
 
 // 预编译正则表达式,提升性能
 const TASK_ATTR_REGEX = new RegExp(`${TASK_ATTR_PREFIX}(\\w+)="([^"]*)"`, 'g');
 
 export class TaskService {
   constructor(private api: ApiService) {}
+
+  buildTaskCompletedAttrs(completed: boolean) {
+    const attrs: Partial<TaskAttrs> = { completed };
+    if (completed) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      attrs.actualDue = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } else {
+      attrs.actualDue = '';
+    }
+    return attrs;
+  }
 
   async getAllTasks(): Promise<Task[]> {
     await apiService.flushTransaction();
@@ -75,9 +92,9 @@ export class TaskService {
         new AppError(`慢查询: ${queryDuration.toFixed(2)}ms`),
         {
           action: 'getAllTasks',
-          level: ErrorLevel.WARN,
-          filteredNotebooks: filteredNotebooks.length,
           filteredBlocks: filteredBlocks.length,
+          filteredNotebooks: filteredNotebooks.length,
+          level: ErrorLevel.WARN,
           resultCount: rows?.length || 0,
         },
         false
@@ -113,92 +130,108 @@ export class TaskService {
         new AppError(`JS过滤慢: ${filterDuration.toFixed(2)}ms`),
         {
           action: 'getAllTasks.filter',
+          filteredRows: filtered.length,
           level: ErrorLevel.WARN,
           totalRows: rows.length,
-          filteredRows: filtered.length,
         },
         false
       );
     }
 
-    return filtered.map((row) => ({
-      id: row.id,
+    const tasks = filtered.map((row) => ({
+      attrs: this.parseIalAttrs(row.ial),
       box: row.box,
       boxTitle: notebookMap.get(row.box) || '',
+      content: row.content,
+      created: row.created,
       hpath: row.hpath,
+      id: row.id,
+      markdown: row.markdown,
       rootId: row.root_id,
       rootTitle: row.root_title || '',
-      content: row.content,
-      markdown: row.markdown,
-      created: row.created,
       updated: row.updated,
-      attrs: this.parseIalAttrs(row.ial),
     }));
-  }
 
-  /**
-   * 从 ial 字段字符串中解析出属性对象
-   */
-  private parseIalAttrs(ial: string): TaskAttrs {
-    const attrs: TaskAttrs = {
-      start: '',
-      planDue: '',
-      actualDue: '',
-      priority: 'normal',
-      notes: '',
-      completed: false,
+    // 按 planDue 升序排序，空值排在后面
+    const sortStartTime = performance.now();
+    const datetimeFormatPattern = plugin.getConfig().datetimeFormatPattern;
+
+    // 预解析所有日期，避免在排序比较中重复解析
+    const dateCache = new Map<string, Date | null>();
+    const getDate = (planDue: string): Date | null => {
+      if (!planDue) return null;
+      let cached = dateCache.get(planDue);
+      if (cached === undefined) {
+        cached = parseDate(planDue, datetimeFormatPattern);
+        dateCache.set(planDue, cached);
+      }
+      return cached;
     };
 
-    if (!ial) return attrs;
+    tasks.sort((a, b) => {
+      const dateA = getDate(a.attrs.planDue);
+      const dateB = getDate(b.attrs.planDue);
 
-    // 解析 ial 字段格式：{: key="value" key2="value2"}
-    // 使用预编译的正则表达式提升性能
-    let match: RegExpExecArray | null;
-    // 重置正则的 lastIndex,确保从头开始匹配
-    TASK_ATTR_REGEX.lastIndex = 0;
+      // 如果两者都为空，保持原顺序
+      if (!dateA && !dateB) return 0;
+      // 如果只有 a 为空，a 排在后面
+      if (!dateA) return 1;
+      // 如果只有 b 为空，b 排在后面
+      if (!dateB) return -1;
 
-    while ((match = TASK_ATTR_REGEX.exec(ial)) !== null) {
-      const [, key, value] = match;
-      switch (key) {
-        case 'start':
-          attrs.start = value;
-          break;
-        case 'plandue':
-          attrs.planDue = value;
-          break;
-        case 'actualdue':
-          attrs.actualDue = value;
-          break;
-        case 'priority':
-          attrs.priority = value;
-          break;
-        case 'notes':
-          attrs.notes = value;
-          break;
-        case 'completed':
-          attrs.completed = value === 'true';
-          break;
-      }
+      // 两者都有值，按日期升序比较
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    // 性能监控
+    const sortDuration = performance.now() - sortStartTime;
+    if (sortDuration > 50) {
+      handleError(
+        new AppError(`排序慢: ${sortDuration.toFixed(2)}ms`),
+        {
+          action: 'getAllTasks.sort',
+          level: ErrorLevel.WARN,
+          taskCount: tasks.length,
+          uniqueDates: dateCache.size,
+        },
+        false
+      );
     }
 
-    return attrs;
+    return tasks;
   }
 
-  async updateTask(id: BlockId, markdown: string) {
-    await this.api.updateBlock(DataType.markdown, markdown, id);
+  async getBlockCreated(blockId: string) {
+    return this.api.getBlockCreated(blockId);
   }
 
   async getTaskAttrs(blockId: string): Promise<TaskAttrs> {
     const attrs = await this.api.getBlockAttrs(blockId);
     const completed = attrs[TaskAttribute.completed] === 'true';
     return {
-      start: attrs[TaskAttribute.start] || '',
-      planDue: attrs[TaskAttribute.planDue] || '',
       actualDue: attrs[TaskAttribute.actualDue] || '',
-      priority: attrs[TaskAttribute.priority] || 'normal',
-      notes: attrs[TaskAttribute.notes] || '',
       completed,
+      notes: attrs[TaskAttribute.notes] || '',
+      planDue: attrs[TaskAttribute.planDue] || '',
+      priority: attrs[TaskAttribute.priority] || 'normal',
+      start: attrs[TaskAttribute.start] || '',
     };
+  }
+
+  async getTaskInfo(blockId: BlockId): Promise<BlockInfo | null> {
+    return this.api.getBlockInfo(blockId);
+  }
+
+  async getTaskMarkdown(blockId: string): Promise<null | string> {
+    return this.api.getBlockMarkdown(blockId);
+  }
+
+  async getTaskStatus(blockId: BlockId): Promise<boolean> {
+    const markdown = await this.getTaskMarkdown(blockId);
+    return isTaskCompleted(markdown);
+  }
+  async openTask(blockId: BlockId) {
+    await this.api.openBlock(blockId);
   }
 
   async setTaskAttrs(blockId: string, attrs: Partial<TaskAttrs>) {
@@ -211,26 +244,6 @@ export class TaskService {
     if (attrs.completed !== undefined)
       toSave[TaskAttribute.completed] = attrs.completed ? 'true' : '';
     await this.api.setBlockAttrs(blockId, toSave);
-  }
-
-  async getTaskMarkdown(blockId: string): Promise<string | null> {
-    return this.api.getBlockMarkdown(blockId);
-  }
-
-  async getTaskStatus(blockId: BlockId): Promise<boolean> {
-    const markdown = await this.getTaskMarkdown(blockId);
-    return isTaskCompleted(markdown);
-  }
-  async getBlockCreated(blockId: string) {
-    return this.api.getBlockCreated(blockId);
-  }
-
-  async getTaskInfo(blockId: BlockId): Promise<BlockInfo | null> {
-    return this.api.getBlockInfo(blockId);
-  }
-
-  async openTask(blockId: BlockId) {
-    await this.api.openBlock(blockId);
   }
 
   /**
@@ -285,20 +298,55 @@ export class TaskService {
       throw error;
     }
   }
-  buildTaskCompletedAttrs(completed: boolean) {
-    const attrs: Partial<TaskAttrs> = { completed };
-    if (completed) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      attrs.actualDue = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    } else {
-      attrs.actualDue = '';
+
+  async updateTask(id: BlockId, markdown: string) {
+    await this.api.updateBlock(DataType.markdown, markdown, id);
+  }
+  /**
+   * 从 ial 字段字符串中解析出属性对象
+   */
+  private parseIalAttrs(ial: string): TaskAttrs {
+    const attrs: TaskAttrs = {
+      actualDue: '',
+      completed: false,
+      notes: '',
+      planDue: '',
+      priority: 'normal',
+      start: '',
+    };
+
+    if (!ial) return attrs;
+
+    // 解析 ial 字段格式：{: key="value" key2="value2"}
+    // 使用预编译的正则表达式提升性能
+    let match: null | RegExpExecArray;
+    // 重置正则的 lastIndex,确保从头开始匹配
+    TASK_ATTR_REGEX.lastIndex = 0;
+
+    while ((match = TASK_ATTR_REGEX.exec(ial)) !== null) {
+      const [, key, value] = match;
+      switch (key) {
+        case 'actualdue':
+          attrs.actualDue = value;
+          break;
+        case 'completed':
+          attrs.completed = value === 'true';
+          break;
+        case 'notes':
+          attrs.notes = value;
+          break;
+        case 'plandue':
+          attrs.planDue = value;
+          break;
+        case 'priority':
+          attrs.priority = value;
+          break;
+        case 'start':
+          attrs.start = value;
+          break;
+      }
     }
+
     return attrs;
   }
 }

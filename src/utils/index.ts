@@ -1,4 +1,4 @@
-import { createApp, type Component } from 'vue';
+import { type Component, createApp } from 'vue';
 
 export function getDomByVueComponent(component: Component) {
   const div = document.createElement('div');
@@ -8,13 +8,13 @@ export function getDomByVueComponent(component: Component) {
 }
 export * from './DateTimeUtils';
 export * from './DomUtils';
-export * from './FrontendDetector';
-export * from './IconRegistry.ts';
-export * from './MessageUtils';
-export * from './PluginConfigManager.ts';
-export * from './PluginInstance.ts';
-export * from './SettingsFactory';
-export * from './TreeUtils.ts';
 export * from './ErrorHandler';
-export * from './TaskMarkdownUtils';
+export * from './FrontendDetector';
+export * from './IconRegistry';
+export * from './MessageUtils';
+export * from './PluginConfigManager';
+export * from './PluginInstance';
+export * from './SettingsFactory';
 export * from './SqlUtils';
+export * from './TaskMarkdownUtils';
+export * from './TreeUtils';

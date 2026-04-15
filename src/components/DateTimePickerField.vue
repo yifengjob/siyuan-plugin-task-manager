@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, computed, useId } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
-import { zhCN, enUS } from 'date-fns/locale';
-import { usePlugin, formatDateObject, parseDate } from '@/utils';
+import { enUS, zhCN } from 'date-fns/locale';
+import { computed, onMounted, onUnmounted, ref, useId, watch } from 'vue';
+
+import { formatDateObject, parseDate, usePlugin } from '@/utils';
 import '@vuepic/vue-datepicker/dist/main.css';
 
 // ============ Props ============
 const props = withDefaults(
   defineProps<{
+    formatPattern?: string;
     modelValue: string;
     placeholder?: string;
-    title?: string;
     readonly?: boolean;
+    title?: string;
     type?: 'date' | 'datetime' | 'time';
-    formatPattern?: string;
   }>(),
   {
-    type: 'date',
-    readonly: false,
-    placeholder: undefined,
-    title: undefined,
     formatPattern: undefined,
+    placeholder: undefined,
+    readonly: false,
+    title: undefined,
+    type: 'date',
   }
 );
 
@@ -59,30 +60,30 @@ const dateTimeFormatPattern = computed(() => {
 });
 
 const formats = computed(() => ({
-  second: 'ss',
-  minute: 'mm',
-  hour: 'HH',
   day: 'dd',
-  week: 'EEE',
-  month: 'MM',
-  year: 'yyyy',
+  hour: 'HH',
   input: dateTimeFormatPattern.value,
+  minute: 'mm',
+  month: 'MM',
   preview: dateTimeFormatPattern.value,
+  second: 'ss',
+  week: 'EEE',
+  year: 'yyyy',
 }));
 
 const timeConfig = computed(() => ({
-  enableTimePicker: props.type === 'datetime',
   enableSeconds: props.type.includes('time') && dateTimeFormatPattern.value.includes('ss'),
+  enableTimePicker: props.type === 'datetime',
 }));
 
 const actionRow = computed(() => ({
-  selectBtnLabel: i18n.btnOk,
   cancelBtnLabel: i18n.btnCancel,
   nowBtnLabel: i18n.btnNow,
-  showSelect: true,
+  selectBtnLabel: i18n.btnOk,
   showCancel: true,
   showNow: true,
   showPreview: true,
+  showSelect: true,
 }));
 
 // ============ 主题检测 ============
@@ -105,8 +106,8 @@ onMounted(() => {
   detectDarkTheme();
   observer = new MutationObserver(detectDarkTheme);
   observer.observe(document.documentElement, {
-    attributes: true,
     attributeFilter: ['class', 'data-theme'],
+    attributes: true,
   });
   updateLocale();
 });
@@ -190,38 +191,8 @@ watch(localDate, (newVal) => {
 <style lang="scss">
 /* ========== 全局主题变量覆盖（适配思源笔记） ========== */
 
-/* 浅色主题 */
-.dp__theme_light {
-  --dp-background-color: var(--b3-theme-background);
-  --dp-text-color: var(--b3-theme-on-background);
-  --dp-hover-color: var(--b3-theme-surface);
-  --dp-hover-text-color: var(--b3-theme-on-surface);
-  --dp-hover-icon-color: var(--b3-theme-primary);
-  --dp-primary-color: var(--b3-theme-primary);
-  --dp-primary-disabled-color: var(--b3-theme-primary-light);
-  --dp-primary-text-color: var(--b3-theme-on-primary);
-  --dp-secondary-color: var(--b3-theme-on-surface);
-  --dp-border-color: var(--b3-border-color);
-  --dp-menu-border-color: var(--b3-border-color);
-  --dp-border-color-hover: var(--b3-theme-primary);
-  --dp-border-color-focus: var(--b3-theme-primary);
-  --dp-disabled-color: var(--b3-theme-surface);
-  --dp-disabled-color-text: var(--b3-theme-on-surface);
-  --dp-scroll-bar-background: var(--b3-theme-surface);
-  --dp-scroll-bar-color: var(--b3-theme-on-surface);
-  --dp-success-color: var(--b3-theme-success);
-  --dp-success-color-disabled: var(--b3-theme-success-light);
-  --dp-icon-color: var(--b3-theme-on-background);
-  --dp-danger-color: var(--b3-theme-danger);
-  --dp-marker-color: var(--b3-theme-danger);
-  --dp-tooltip-color: var(--b3-theme-background);
-  --dp-highlight-color: var(--b3-theme-primary-lightest);
-  --dp-range-between-dates-background-color: var(--b3-theme-primary-lightest);
-  --dp-range-between-dates-text-color: var(--b3-theme-on-background);
-  --dp-range-between-border-color: var(--b3-theme-primary-light);
-}
-
-/* 深色主题 */
+/* 浅色主题和深色主题用同样的规则，由思源笔记统一管理 */
+.dp__theme_light,
 .dp__theme_dark {
   --dp-background-color: var(--b3-theme-background);
   --dp-text-color: var(--b3-theme-on-background);

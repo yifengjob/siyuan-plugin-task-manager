@@ -43,5 +43,8 @@
   "search": "Search tasks...",
   "searchResults": "Found {count} results",
   "clearSearch": "Clear search",
-  "noSearchResults": "No matching tasks found"
+  "noSearchResults": "No matching tasks found",
+  "componentRenderError": "Component render failed",
+  "retry": "Retry",
+  "unknownError": "Unknown error"
 }

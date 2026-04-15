@@ -1,18 +1,19 @@
-date
 <script setup lang="ts">
-import type { Task, PopoverOptions } from '@/types';
-import { taskService } from '@/services/TaskService';
-import { usePlugin } from '@/utils';
-import { handleError } from '@/utils/ErrorHandler';
-import { useTaskStore } from '@/stores/tasks.store';
-import { useConfigStore } from '@/stores/config.store';
-import TaskItem from '@/components/TaskItem.vue';
+import { computed } from 'vue';
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
+
+import type { PopoverOptions, Task } from '@/types';
+
 import ErrorBoundary from '@/components/ErrorBoundary.vue';
+import TaskItem from '@/components/TaskItem.vue';
 import { useTaskFilter } from '@/composables/useTaskFilter';
 import { useTaskSync } from '@/composables/useTaskSync';
 import { useTooltip } from '@/composables/useTooltip';
-import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
-import { computed } from 'vue';
+import { taskService } from '@/services/TaskService';
+import { useConfigStore } from '@/stores/config.store';
+import { useTaskStore } from '@/stores/tasks.store';
+import { usePlugin } from '@/utils';
+import { handleError } from '@/utils/ErrorHandler';
 
 const plugin = usePlugin();
 const i18n = plugin.i18n;
@@ -21,52 +22,52 @@ const configStore = useConfigStore();
 
 // 使用 composables
 const {
-  filterStatus,
-  filteredTasks,
-  groups,
-  totalTasks,
+  clearSearch,
   completedTasks,
+  filteredTasks,
+  filterStatus,
+  groups,
+  hasActiveSearch,
   incompleteTasks,
   searchQuery,
-  setSearchQuery,
-  clearSearch,
-  hasActiveSearch,
   searchResultCount,
+  setSearchQuery,
+  totalTasks,
 } = useTaskFilter();
 
-const { isLoading, loadError, handleRefresh } = useTaskSync();
+const { handleRefresh, isLoading, loadError } = useTaskSync();
 
 const { onMouseEnter: onTitleMouseEnter, onMouseLeave: onTitleMouseLeave } = useTooltip();
 
 // 扁平化任务列表用于虚拟滚动（带分组标题）
 const mixedItemsList = computed(() => {
   const items: Array<{
-    id: string;
-    type: 'header' | 'task';
-    rootId?: string;
-    rootTitle?: string;
     boxTitle?: string;
+    id: string;
+    rootId?: string;
     rootPath?: string;
-    taskCount?: number;
+    rootTitle?: string;
     task?: Task;
+    taskCount?: number;
+    type: 'header' | 'task';
   }> = [];
   groups.value.forEach((group) => {
     // 添加标题项
     items.push({
-      id: `header-${group.rootId}`,
-      type: 'header',
-      rootId: group.rootId,
-      rootTitle: group.rootTitle,
       boxTitle: group.boxTitle,
+      id: `header-${group.rootId}`,
+      rootId: group.rootId,
       rootPath: group.rootPath,
+      rootTitle: group.rootTitle,
       taskCount: group.tasks.length,
+      type: 'header',
     });
     // 添加该组的所有任务
     group.tasks.forEach((task) => {
       items.push({
         id: `task-${task.id}`,
-        type: 'task',
         task,
+        type: 'task',
       });
     });
   });
@@ -108,14 +109,14 @@ const onTaskClick = async (task: Task, event?: MouseEvent) => {
     };
     // 构建 Popover 选项
     const options: PopoverOptions = {
-      placement: 'left',
-      offset: 15,
-      taskId: id,
-      referenceEl: taskElement,
-      isEditable: true,
       attrs,
       createdDate,
+      isEditable: true,
+      offset: 15,
+      placement: 'left',
+      referenceEl: taskElement,
       referencePoint: referencePoint,
+      taskId: id,
     };
 
     // 显示 Popover - 通过 plugin 实例访问 appComponent
@@ -162,20 +163,20 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
       <div class="task-filter-group">
         <label class="task-filter-radio">
           <input v-model="filterStatus" type="radio" value="incomplete" />
-          <span>{{ i18n.inProgress ?? '未完成' }}</span>
+          <span>{{ i18n.inProgress }}</span>
         </label>
         <label class="task-filter-radio">
           <input v-model="filterStatus" type="radio" value="completed" />
-          <span>{{ i18n.completed ?? '已完成' }}</span>
+          <span>{{ i18n.completed }}</span>
         </label>
         <label class="task-filter-radio">
           <input v-model="filterStatus" type="radio" value="all" />
-          <span>{{ i18n.all ?? '全部' }}</span>
+          <span>{{ i18n.all }}</span>
         </label>
       </div>
       <button
         class="task-refresh-btn b3-button b3-button--text"
-        :title="i18n.refresh ?? '刷新'"
+        :title="i18n.refresh"
         @click="handleRefresh"
       >
         <svg class="icon"><use xlink:href="#iconRefresh"></use></svg>
@@ -192,20 +193,20 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
           v-model="searchQuery"
           type="text"
           class="task-search-input"
-          :placeholder="i18n.search ?? '搜索任务...'"
+          :placeholder="i18n.search"
           @input="(e) => setSearchQuery((e.target as HTMLInputElement).value)"
         />
         <button
           v-if="hasActiveSearch"
           class="search-clear-btn"
-          title="清除搜索"
+          :title="i18n.clearSearch"
           @click="clearSearch"
         >
           <svg class="icon"><use xlink:href="#iconClose"></use></svg>
         </button>
       </div>
       <div v-if="hasActiveSearch" class="search-result-count">
-        找到 {{ searchResultCount }} 个结果
+        {{ i18n.searchResults.replace('{count}', searchResultCount.toString()) }}
       </div>
     </div>
 
@@ -217,7 +218,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
       >
         <div v-if="isLoading" class="task-sidebar-loading">
           <div class="loading-spinner"></div>
-          <span>{{ i18n.loading ?? '加载中...' }}</span>
+          <span>{{ i18n.loading }}</span>
         </div>
         <div v-else-if="loadError" class="task-sidebar-error">
           <svg class="error-icon">
@@ -229,8 +230,8 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
           <svg class="empty-icon">
             <use xlink:href="#iconEmpty"></use>
           </svg>
-          <span v-if="hasActiveSearch">{{ i18n.noSearchResults ?? '未找到匹配的任务' }}</span>
-          <span v-else>{{ i18n.noTasks ?? '暂无任务' }}</span>
+          <span v-if="hasActiveSearch">{{ i18n.noSearchResults }}</span>
+          <span v-else>{{ i18n.noTasks }}</span>
         </div>
         <div v-else>
           <!-- 虚拟滚动模式 -->
@@ -311,15 +312,15 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     <div class="task-sidebar-footer">
       <span class="task-stat task-stat--primary">
         <span class="stat-dot"></span>
-        {{ i18n.inProgress ?? '进行中' }}：{{ incompleteTasks }}
+        {{ i18n.inProgress }}：{{ incompleteTasks }}
       </span>
       <span class="task-stat task-stat--success">
         <span class="stat-dot"></span>
-        {{ i18n.completed ?? '已完成' }}：{{ completedTasks }}
+        {{ i18n.completed }}：{{ completedTasks }}
       </span>
       <span class="task-stat task-stat--info">
         <span class="stat-dot"></span>
-        {{ i18n.totalTasks ?? '总任务' }}：{{ totalTasks }}
+        {{ i18n.totalTasks }}：{{ totalTasks }}
       </span>
     </div>
   </div>
@@ -630,8 +631,8 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     padding: 9px 13px;
     background: linear-gradient(
       135deg,
-      var(--b3-theme-primary-lightest) 0%,
-      var(--b3-theme-surface-light) 100%
+      var(--b3-theme-primary-lighter) 0%,
+      var(--b3-theme-primary-lightest) 100%
     );
     border-radius: 10px;
     margin-bottom: 10px;
@@ -653,7 +654,7 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
       background: linear-gradient(
         135deg,
         var(--b3-theme-primary-lighter) 0%,
-        var(--b3-theme-surface-light) 100%
+        var(--b3-theme-primary-lightest) 100%
       );
       opacity: 0;
       transition: opacity 0.3s ease;
@@ -661,7 +662,8 @@ const toggleCompleted = async (taskId: string, completed: boolean) => {
     }
 
     &:hover {
-      transform: scale(1.02);
+      transform: translateY(-2px) scale(1.02);
+      color: var(--b3-theme-on-primary);
 
       &::before {
         opacity: 1;

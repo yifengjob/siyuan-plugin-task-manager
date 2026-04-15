@@ -4,9 +4,9 @@
   "url": "https://github.com/yifengjob/siyuan-plugin-task-manager",
   "version": "1.0.0",
   "minAppVersion": "3.3.0",
-  "disabledInPublish": true,
+  "disabledInPublish": false,
   "backends": ["all"],
-  "frontends": ["desktop", "browser-desktop", "desktop-window"],
+  "frontends": ["all"],
   "displayName": {
     "default": "任务管理",
     "en_US": "Task manager"

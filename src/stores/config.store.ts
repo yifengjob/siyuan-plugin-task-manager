@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { shallowRef } from 'vue';
+
 import type { PluginConfig } from '@/types';
+
 import { DEFAULT_CONFIG } from '@/constants';
 
 export const useConfigStore = defineStore('config', () => {
@@ -22,8 +24,8 @@ export const useConfigStore = defineStore('config', () => {
 
   return {
     config,
+    getConfig,
     setConfig,
     updateConfig,
-    getConfig,
   };
 });

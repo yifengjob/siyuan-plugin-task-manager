@@ -1,7 +1,9 @@
-import type { Task, TaskAttrs } from '@/types';
 import { defineStore } from 'pinia';
-import { taskService } from '@/services/TaskService';
 import { ref } from 'vue';
+
+import type { Task, TaskAttrs } from '@/types';
+
+import { taskService } from '@/services/TaskService';
 import { handleError } from '@/utils/ErrorHandler';
 import { toggleTaskCheckbox } from '@/utils/TaskMarkdownUtils';
 
@@ -108,8 +110,8 @@ export const useTaskStore = defineStore('tasks', () => {
       tasks.value[taskIndex].markdown = originalMarkdown;
       handleError(error, {
         action: 'toggleTaskStatus',
-        taskId,
         completed,
+        taskId,
       });
       throw error;
     }
@@ -146,18 +148,18 @@ export const useTaskStore = defineStore('tasks', () => {
       tasks.value[taskIndex].attrs = originalAttrs;
       handleError(error, {
         action: 'syncTaskStatus',
-        taskId,
         completed,
+        taskId,
       });
       throw error;
     }
   }
 
   return {
-    tasks,
     loadTasks,
-    updateTaskAttributes,
-    toggleTaskStatus,
     syncTaskStatus,
+    tasks,
+    toggleTaskStatus,
+    updateTaskAttributes,
   };
 });

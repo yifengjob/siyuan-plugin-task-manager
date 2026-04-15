@@ -1,14 +1,15 @@
 // src/utils/FrontendDetector.ts
 import { getFrontend } from 'siyuan';
+
 import { SyFrontendTypes } from '@/types';
 
 export interface FrontendInfo {
-  platform: SyFrontendTypes;
-  isMobile: boolean;
   isBrowser: boolean;
-  isLocal: boolean;
-  isInWindow: boolean;
   isElectron: boolean;
+  isInWindow: boolean;
+  isLocal: boolean;
+  isMobile: boolean;
+  platform: SyFrontendTypes;
 }
 
 export class FrontendDetector {
@@ -19,12 +20,12 @@ export class FrontendDetector {
       typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron');
 
     return {
-      platform: frontEnd,
-      isMobile: frontEnd === 'mobile' || frontEnd === 'browser-mobile',
       isBrowser: frontEnd.includes('browser'),
-      isLocal: location.href.includes('127.0.0.1') || location.href.includes('localhost'),
-      isInWindow: location.href.includes('window.html'),
       isElectron,
+      isInWindow: location.href.includes('window.html'),
+      isLocal: location.href.includes('127.0.0.1') || location.href.includes('localhost'),
+      isMobile: frontEnd === 'mobile' || frontEnd === 'browser-mobile',
+      platform: frontEnd,
     };
   }
 }

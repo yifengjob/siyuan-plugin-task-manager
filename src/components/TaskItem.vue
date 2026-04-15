@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import type { Task } from '@/types';
 import { computed } from 'vue';
-import { usePlugin, formatDate } from '@/utils';
+
+import type { Task } from '@/types';
+
 import { useConfigStore } from '@/stores/config.store';
+import { formatDate, renderMarkdownWithLute, usePlugin } from '@/utils';
 
 const props = defineProps<{ task: Task }>();
 const emit = defineEmits<{
@@ -20,9 +22,9 @@ const dateTimeFormatPattern = computed(() => {
 const priorityText = computed(() => {
   const map: Record<string, string> = {
     high: i18n.priorityHigh,
+    low: i18n.priorityLow,
     medium: i18n.priorityMedium,
     normal: i18n.priorityNormal,
-    low: i18n.priorityLow,
   };
   return map[props.task.attrs.priority] || props.task.attrs.priority;
 });
@@ -53,6 +55,9 @@ const onTitleClick = () => {
   emit('open-task', props.task);
 };
 
+const renderMarkdownTrustedHtml = computed(() => {
+  return renderMarkdownWithLute(props.task.markdown || i18n.untitled, true);
+});
 // 优化：只有存在元数据时才渲染对应的区域
 const hasAnyMetadata = computed(() => {
   return !!(props.task.attrs.notes || props.task.attrs.priority);
@@ -80,9 +85,7 @@ const hasAnyDateInfo = computed(() => {
         />
         <span class="checkmark"></span>
       </label>
-      <div class="task-title" @click.stop="onTitleClick">
-        {{ task.content || i18n.untitled }}
-      </div>
+      <div class="task-title" @click.stop="onTitleClick" v-html="renderMarkdownTrustedHtml"></div>
     </div>
     <div class="task-metas">
       <div
@@ -147,16 +150,16 @@ const hasAnyDateInfo = computed(() => {
 
 <style scoped lang="scss">
 .task-item {
-  background: var(--b3-theme-surface-light);
+  background: var(--b3-theme-surface);
   padding: 12px;
   margin-bottom: 8px;
   border-radius: 10px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--b3-point-shadow);
 
   &:hover {
-    background: var(--b3-theme-background);
-    transform: translateY(-1px);
+    background: var(--b3-theme-surface-light);
+    transform: translateY(-2px) scale(1.01);
   }
 
   &.completed {
@@ -249,7 +252,7 @@ const hasAnyDateInfo = computed(() => {
     }
 
     .task-title {
-      font-weight: 500;
+      font-weight: bold;
       font-size: 14px;
       line-height: 1.5;
       color: var(--b3-theme-on-background);
@@ -257,6 +260,10 @@ const hasAnyDateInfo = computed(() => {
       word-break: break-word;
       cursor: pointer;
       transition: color 0.2s ease;
+
+      &:has(strong) {
+        font-weight: normal;
+      }
 
       &:hover {
         color: var(--b3-theme-primary);

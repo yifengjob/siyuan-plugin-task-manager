@@ -1,44 +1,76 @@
 {
+  // TypeScript 编译器选项配置
   "compilerOptions": {
+    // 目标 JavaScript 版本:使用最新的 ECMAScript 特性
     "target": "ESNext",
+    // JSX 语法处理方式:保留 JSX 语法供后续工具(如 Vite)处理
     "jsx": "preserve",
+    // 包含的库文件:支持最新 ES 特性、DOM API 和 DOM 迭代器
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    // 类字段声明方式:使用标准的 defineProperty 而非赋值方式
     "useDefineForClassFields": true,
+    // 模块系统:使用最新的 ES 模块标准
     "module": "ESNext",
-    /* Bundler mode */
+    /* 打包器模式配置 */
+    // 模块解析策略:使用 Bundler 模式,适配 Vite 等现代打包工具
     "moduleResolution": "Bundler",
+    // 路径别名映射:简化导入路径
     "paths": {
       "@/*": ["./src/*"],
       "@/libs/*": ["./src/libs/*"]
     },
+    // 允许导入 JSON 模块
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
+    // 不允许在导入时使用 TypeScript 扩展名(.ts)
+    "allowImportingTsExtensions": false,
+    // 允许导入 JavaScript 文件
     "allowJs": true,
-    /* Linting */
+    /* 代码质量检查 */
+    // 启用所有严格类型检查选项
     "strict": true,
+    // 禁止隐式的 any 类型
     "noImplicitAny": true,
+    // 启用严格的 null 检查
     "strictNullChecks": true,
+    // 对函数类型进行严格检查
     "strictFunctionTypes": true,
+    // 对 bind、call、apply 方法进行严格检查
     "strictBindCallApply": true,
+    // 确保类属性在构造函数中被初始化
     "strictPropertyInitialization": true,
+    // 禁止隐式的 this 类型
     "noImplicitThis": true,
+    // 始终以严格模式解析代码
     "alwaysStrict": true,
+    // 禁止 switch 语句中的 case 穿透
     "noFallthroughCasesInSwitch": true,
+    // 报告未使用的局部变量
     "noUnusedLocals": true,
+    // 报告未使用的函数参数
     "noUnusedParameters": true,
+    // 使用 tslib 辅助函数减少代码重复(需要安装 tslib 依赖)
     "importHelpers": true,
+    // 不生成输出文件,仅进行类型检查(Vite 负责编译)
     "noEmit": true,
+    // 允许默认导入没有默认导出的模块
     "allowSyntheticDefaultImports": true,
+    // 启用 ES 模块与 CommonJS 模块的互操作性
     "esModuleInterop": true,
+    // 确保每个文件都可以独立编译,提升构建性能
     "isolatedModules": true,
+    // 跳过声明文件的类型检查,加速编译
     "skipLibCheck": true,
+    // 移除代码中的注释,减小输出体积
     "removeComments": true
   },
+  // 项目引用:用于多项目配置,引用 Node 相关的配置文件
   "references": [
     {
       "path": "./tsconfig.node.json"
     }
   ],
+  // 包含的文件模式:TypeScript 文件、声明文件和 Vue 单文件组件
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue"],
+  // 排除的文件或目录:node_modules 和废弃的代码
   "exclude": ["node_modules", "src/abandon"]
 }

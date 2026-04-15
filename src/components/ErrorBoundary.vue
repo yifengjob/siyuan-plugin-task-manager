@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onErrorCaptured, ref } from 'vue';
-import { handleError } from '@/utils/ErrorHandler';
+
+import { handleError, usePlugin } from '@/utils';
 
 const props = defineProps<{
   name?: string; // 组件名称，用于错误上下文
 }>();
+
+const plugin = usePlugin();
+const i18n = plugin.i18n;
 
 const error = ref<Error | null>(null);
 
@@ -14,9 +18,9 @@ onErrorCaptured((err, instance, info) => {
 
   // 记录错误
   handleError(errorObj, {
-    context: `ErrorBoundary-${props.name || 'Unknown'}`,
     componentInfo: info,
     componentInstance: instance,
+    context: `ErrorBoundary-${props.name || 'Unknown'}`,
   });
 
   // 保存错误状态以显示错误 UI
@@ -37,11 +41,13 @@ const handleRetry = () => {
       <svg class="error-icon">
         <use xlink:href="#iconError"></use>
       </svg>
-      <h3 class="error-title">组件渲染失败</h3>
+      <h3 class="error-title">{{ i18n.componentRenderError }}</h3>
       <p class="error-message">
         {{ error.message }}
       </p>
-      <button class="retry-button b3-button b3-button--outline" @click="handleRetry">重试</button>
+      <button class="retry-button b3-button b3-button--outline" @click="handleRetry">
+        {{ i18n.retry }}
+      </button>
     </div>
   </div>
   <slot v-else></slot>

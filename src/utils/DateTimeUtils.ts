@@ -9,73 +9,68 @@ const STANDARD_DATE_TIME_NO_SECONDS = /^\d{4}[-/.]\d{2}[-/.]\d{2}[T ]\d{2}:\d{2}
 const STANDARD_DATE_ONLY = /^\d{4}[-/.]\d{2}[-/.]\d{2}$/; // 仅日期格式
 
 /**
- * 格式化日期对象为指定格式
- * @param date Date 对象
- * @param format 格式字符串，支持：yyyy, MM, dd, HH, mm, ss, SSS(毫秒), E(星期), a(上下午)
- * @returns 格式化后的字符串
+ * 日期加减操作
+ * @param date 基础日期
+ * @param days 天数（正数加，负数减）
+ * @returns 新的 Date 对象
  */
-export function formatDateObject(date: Date, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+export function addDays(date: Date | string, days: number): Date {
+  const d = date instanceof Date ? date : parseDate(date);
+  if (!d) return new Date();
 
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-  const weekDay = weekDays[date.getDay()];
-  const amPm = date.getHours() >= 12 ? 'PM' : 'AM';
-
-  return format
-    .replace('yyyy', String(year))
-    .replace('MM', month)
-    .replace('dd', day)
-    .replace('HH', hours)
-    .replace('mm', minutes)
-    .replace('ss', seconds)
-    .replace('SSS', milliseconds)
-    .replace('E', weekDay)
-    .replace('a', amPm);
+  const result = new Date(d);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 /**
- * 解析日期字符串为 Date 对象
- * @param value 日期字符串
- * @returns Date 对象或 null
+ * 月份加减操作
+ * @param date 基础日期
+ * @param months 月数（正数加，负数减）
+ * @returns 新的 Date 对象
  */
-export function parseDate(value: string): Date | null {
-  try {
-    // 尝试直接使用 Date 构造函数
-    const date = new Date(value);
-    if (!Number.isNaN(date.getTime())) {
-      return date;
-    }
+export function addMonths(date: Date | string, months: number): Date {
+  const d = date instanceof Date ? date : parseDate(date);
+  if (!d) return new Date();
 
-    // 如果是纯数字格式，转换为标准格式后再解析
-    const digits = value.replace(/[^0-9]/g, '');
-    if (digits.length === 8) {
-      // yyyyMMdd
-      return new Date(
-        `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)}`
-      );
-    } else if (digits.length === 12) {
-      // yyyyMMddHHmm
-      return new Date(
-        `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)} ${digits.substring(8, 10)}:${digits.substring(10, 12)}`
-      );
-    } else if (digits.length === 14) {
-      // yyyyMMddHHmmss
-      return new Date(
-        `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)} ${digits.substring(8, 10)}:${digits.substring(10, 12)}:${digits.substring(12, 14)}`
-      );
-    }
+  const result = new Date(d);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
 
-    return null;
-  } catch (e) {
-    handleError(e, { context: 'parseDate' }, false);
-    return null;
-  }
+/**
+ * 年份加减操作
+ * @param date 基础日期
+ * @param years 年数（正数加，负数减）
+ * @returns 新的 Date 对象
+ */
+export function addYears(date: Date | string, years: number): Date {
+  const d = date instanceof Date ? date : parseDate(date);
+  if (!d) return new Date();
+
+  const result = new Date(d);
+  result.setFullYear(result.getFullYear() + years);
+  return result;
+}
+
+/**
+ * 比较两个日期（忽略时间部分）
+ * @param date1 日期 1
+ * @param date2 日期 2
+ * @returns 0 表示相同，1 表示 date1 晚于 date2，-1 表示 date1 早于 date2
+ */
+export function compareDates(date1: Date | string, date2: Date | string): number {
+  const d1 = date1 instanceof Date ? date1 : parseDate(date1);
+  const d2 = date2 instanceof Date ? date2 : parseDate(date2);
+
+  if (!d1 || !d2) return 0;
+
+  const time1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate()).getTime();
+  const time2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
+
+  if (time1 > time2) return 1;
+  if (time1 < time2) return -1;
+  return 0;
 }
 
 /**
@@ -85,7 +80,7 @@ export function parseDate(value: string): Date | null {
  *               支持的格式标记：yyyy(年), MM(月), dd(日), HH(时), mm(分), ss(秒), SSS(毫秒), E(星期), a(上下午)
  * @returns 格式化后的字符串，如果输入无效则返回 '—'
  */
-export function formatDate(value: string | null, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
+export function formatDate(value: null | string, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
   if (!value) return '—';
 
   let dateObj: Date | null;
@@ -131,11 +126,96 @@ export function formatDate(value: string | null, format: string = 'yyyy-MM-dd HH
 }
 
 /**
+ * 格式化日期对象为指定格式
+ * @param date Date 对象
+ * @param format 格式字符串，支持：yyyy, MM, dd, HH, mm, ss, SSS(毫秒), E(星期), a(上下午)
+ * @returns 格式化后的字符串
+ */
+export function formatDateObject(date: Date, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const weekDay = weekDays[date.getDay()];
+  const amPm = date.getHours() >= 12 ? 'PM' : 'AM';
+
+  return format
+    .replace('yyyy', String(year))
+    .replace('MM', month)
+    .replace('dd', day)
+    .replace('HH', hours)
+    .replace('mm', minutes)
+    .replace('ss', seconds)
+    .replace('SSS', milliseconds)
+    .replace('E', weekDay)
+    .replace('a', amPm);
+}
+
+/**
+ * 格式化持续时间
+ * @param milliseconds 毫秒数
+ * @param format 格式字符串，默认 'HH:mm:ss'
+ * @returns 格式化后的持续时间
+ */
+export function formatDuration(milliseconds: number, format: string = 'HH:mm:ss'): string {
+  if (milliseconds < 0) milliseconds = 0;
+
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const h = String(hours).padStart(2, '0');
+  const m = String(minutes).padStart(2, '0');
+  const s = String(seconds).padStart(2, '0');
+
+  return format.replace('HH', h).replace('mm', m).replace('ss', s);
+}
+
+/**
+ * 获取指定日期是一周中的第几天
+ * @param date Date 对象或日期字符串
+ * @returns 1-7（1 表示周一，7 表示周日）
+ */
+export function getDayOfWeek(date: Date | null | string): number {
+  if (!date) return 0;
+
+  const target = date instanceof Date ? date : parseDate(date);
+  if (!target || Number.isNaN(target.getTime())) {
+    return 0;
+  }
+
+  const day = target.getDay();
+  return day === 0 ? 7 : day; // 将周日从 0 改为 7
+}
+
+/**
+ * 计算两个日期之间的天数差
+ * @param date1 日期 1
+ * @param date2 日期 2
+ * @returns 天数差（绝对值）
+ */
+export function getDaysBetween(date1: Date | string, date2: Date | string): number {
+  const d1 = date1 instanceof Date ? date1 : parseDate(date1);
+  const d2 = date2 instanceof Date ? date2 : parseDate(date2);
+
+  if (!d1 || !d2) return 0;
+
+  const diffTime = Math.abs(d2.getTime() - d1.getTime());
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
  * 获取相对时间描述
  * @param date Date 对象或日期字符串
  * @returns 相对时间描述，如 "刚刚"、"5 分钟前"、"2 小时前"、"昨天" 等
  */
-export function getRelativeTime(date: Date | string | null): string {
+export function getRelativeTime(date: Date | null | string): string {
   if (!date) return '—';
 
   const now = new Date();
@@ -172,47 +252,22 @@ export function getRelativeTime(date: Date | string | null): string {
 }
 
 /**
- * 判断是否为今天
+ * 获取指定日期是一年中的第几周
  * @param date Date 对象或日期字符串
- * @returns true/false
+ * @returns 周数 (1-53)
  */
-export function isToday(date: Date | string | null): boolean {
-  if (!date) return false;
+export function getWeekOfYear(date: Date | null | string): number {
+  if (!date) return 0;
 
   const target = date instanceof Date ? date : parseDate(date);
   if (!target || Number.isNaN(target.getTime())) {
-    return false;
+    return 0;
   }
 
-  const now = new Date();
-  return (
-    target.getFullYear() === now.getFullYear() &&
-    target.getMonth() === now.getMonth() &&
-    target.getDate() === now.getDate()
-  );
-}
+  const firstDayOfYear = new Date(target.getFullYear(), 0, 1);
+  const pastDays = Math.floor((target.getTime() - firstDayOfYear.getTime()) / 86400000);
 
-/**
- * 判断是否为昨天
- * @param date Date 对象或日期字符串
- * @returns true/false
- */
-export function isYesterday(date: Date | string | null): boolean {
-  if (!date) return false;
-
-  const target = date instanceof Date ? date : parseDate(date);
-  if (!target || Number.isNaN(target.getTime())) {
-    return false;
-  }
-
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  return (
-    target.getFullYear() === yesterday.getFullYear() &&
-    target.getMonth() === yesterday.getMonth() &&
-    target.getDate() === yesterday.getDate()
-  );
+  return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
 }
 
 /**
@@ -223,7 +278,7 @@ export function isYesterday(date: Date | string | null): boolean {
  * @returns true 表示在范围内，false 表示不在范围内
  */
 export function isDateInRange(
-  date: Date | string | null,
+  date: Date | null | string,
   startDate: Date | string,
   endDate: Date | string
 ): boolean {
@@ -245,76 +300,24 @@ export function isDateInRange(
 }
 
 /**
- * 计算两个日期之间的天数差
- * @param date1 日期 1
- * @param date2 日期 2
- * @returns 天数差（绝对值）
- */
-export function getDaysBetween(date1: Date | string, date2: Date | string): number {
-  const d1 = date1 instanceof Date ? date1 : parseDate(date1);
-  const d2 = date2 instanceof Date ? date2 : parseDate(date2);
-
-  if (!d1 || !d2) return 0;
-
-  const diffTime = Math.abs(d2.getTime() - d1.getTime());
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-}
-
-/**
- * 获取指定日期是一周中的第几天
+ * 判断是否为今天
  * @param date Date 对象或日期字符串
- * @returns 1-7（1 表示周一，7 表示周日）
+ * @returns true/false
  */
-export function getDayOfWeek(date: Date | string | null): number {
-  if (!date) return 0;
+export function isToday(date: Date | null | string): boolean {
+  if (!date) return false;
 
   const target = date instanceof Date ? date : parseDate(date);
   if (!target || Number.isNaN(target.getTime())) {
-    return 0;
+    return false;
   }
 
-  const day = target.getDay();
-  return day === 0 ? 7 : day; // 将周日从 0 改为 7
-}
-
-/**
- * 获取指定日期是一年中的第几周
- * @param date Date 对象或日期字符串
- * @returns 周数 (1-53)
- */
-export function getWeekOfYear(date: Date | string | null): number {
-  if (!date) return 0;
-
-  const target = date instanceof Date ? date : parseDate(date);
-  if (!target || Number.isNaN(target.getTime())) {
-    return 0;
-  }
-
-  const firstDayOfYear = new Date(target.getFullYear(), 0, 1);
-  const pastDays = Math.floor((target.getTime() - firstDayOfYear.getTime()) / 86400000);
-
-  return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
-}
-
-/**
- * 格式化持续时间
- * @param milliseconds 毫秒数
- * @param format 格式字符串，默认 'HH:mm:ss'
- * @returns 格式化后的持续时间
- */
-export function formatDuration(milliseconds: number, format: string = 'HH:mm:ss'): string {
-  if (milliseconds < 0) milliseconds = 0;
-
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  const h = String(hours).padStart(2, '0');
-  const m = String(minutes).padStart(2, '0');
-  const s = String(seconds).padStart(2, '0');
-
-  return format.replace('HH', h).replace('mm', m).replace('ss', s);
+  const now = new Date();
+  return (
+    target.getFullYear() === now.getFullYear() &&
+    target.getMonth() === now.getMonth() &&
+    target.getDate() === now.getDate()
+  );
 }
 
 /**
@@ -322,7 +325,7 @@ export function formatDuration(milliseconds: number, format: string = 'HH:mm:ss'
  * @param value 日期字符串
  * @returns true/false
  */
-export function isValidDate(value: string | null): boolean {
+export function isValidDate(value: null | string): boolean {
   if (!value) return false;
 
   if (
@@ -341,66 +344,145 @@ export function isValidDate(value: string | null): boolean {
 }
 
 /**
- * 比较两个日期（忽略时间部分）
- * @param date1 日期 1
- * @param date2 日期 2
- * @returns 0 表示相同，1 表示 date1 晚于 date2，-1 表示 date1 早于 date2
+ * 判断是否为昨天
+ * @param date Date 对象或日期字符串
+ * @returns true/false
  */
-export function compareDates(date1: Date | string, date2: Date | string): number {
-  const d1 = date1 instanceof Date ? date1 : parseDate(date1);
-  const d2 = date2 instanceof Date ? date2 : parseDate(date2);
+export function isYesterday(date: Date | null | string): boolean {
+  if (!date) return false;
 
-  if (!d1 || !d2) return 0;
+  const target = date instanceof Date ? date : parseDate(date);
+  if (!target || Number.isNaN(target.getTime())) {
+    return false;
+  }
 
-  const time1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate()).getTime();
-  const time2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
 
-  if (time1 > time2) return 1;
-  if (time1 < time2) return -1;
-  return 0;
+  return (
+    target.getFullYear() === yesterday.getFullYear() &&
+    target.getMonth() === yesterday.getMonth() &&
+    target.getDate() === yesterday.getDate()
+  );
 }
 
 /**
- * 日期加减操作
- * @param date 基础日期
- * @param days 天数（正数加，负数减）
- * @returns 新的 Date 对象
+ * 解析日期字符串为 Date 对象
+ * @param value 日期字符串
+ * @param formatPattern 可选的格式模式，如果提供则优先按此格式解析
+ * @returns Date 对象或 null
  */
-export function addDays(date: Date | string, days: number): Date {
-  const d = date instanceof Date ? date : parseDate(date);
-  if (!d) return new Date();
+export function parseDate(value: string, formatPattern?: string): Date | null {
+  try {
+    // 如果提供了格式模式，先尝试按指定格式解析
+    if (formatPattern) {
+      const dateByFormat = parseDateByFormat(value, formatPattern);
+      if (dateByFormat) {
+        return dateByFormat;
+      }
+      // 按指定格式解析失败，继续尝试其他方法
+    }
 
-  const result = new Date(d);
-  result.setDate(result.getDate() + days);
-  return result;
+    // 尝试直接使用 Date 构造函数
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+
+    // 如果是纯数字格式，转换为标准格式后再解析
+    const digits = value.replace(/[^0-9]/g, '');
+    if (digits.length === 8) {
+      // yyyyMMdd
+      return new Date(
+        `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)}`
+      );
+    } else if (digits.length === 12) {
+      // yyyyMMddHHmm
+      return new Date(
+        `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)} ${digits.substring(8, 10)}:${digits.substring(10, 12)}`
+      );
+    } else if (digits.length === 14) {
+      // yyyyMMddHHmmss
+      return new Date(
+        `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)} ${digits.substring(8, 10)}:${digits.substring(10, 12)}:${digits.substring(12, 14)}`
+      );
+    }
+
+    return null;
+  } catch (e) {
+    handleError(e, { context: 'parseDate' }, false);
+    return null;
+  }
 }
 
 /**
- * 月份加减操作
- * @param date 基础日期
- * @param months 月数（正数加，负数减）
- * @returns 新的 Date 对象
+ * 根据格式模式解析日期字符串
+ * @param value 日期字符串
+ * @param formatPattern 格式模式，如 'yyyy-MM-dd HH:mm:ss'
+ * @returns Date 对象或 null
  */
-export function addMonths(date: Date | string, months: number): Date {
-  const d = date instanceof Date ? date : parseDate(date);
-  if (!d) return new Date();
+function parseDateByFormat(value: string, formatPattern: string): Date | null {
+  try {
+    // 构建正则表达式，从格式模式中提取各部分的位置
+    const pattern = formatPattern
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // 转义特殊字符
+      .replace('yyyy', '(\\d{4})')
+      .replace('MM', '(\\d{2})')
+      .replace('dd', '(\\d{2})')
+      .replace('HH', '(\\d{2})')
+      .replace('mm', '(\\d{2})')
+      .replace('ss', '(\\d{2})');
 
-  const result = new Date(d);
-  result.setMonth(result.getMonth() + months);
-  return result;
-}
+    const regex = new RegExp(`^${pattern}$`);
+    const match = value.match(regex);
 
-/**
- * 年份加减操作
- * @param date 基础日期
- * @param years 年数（正数加，负数减）
- * @returns 新的 Date 对象
- */
-export function addYears(date: Date | string, years: number): Date {
-  const d = date instanceof Date ? date : parseDate(date);
-  if (!d) return new Date();
+    if (!match) return null;
 
-  const result = new Date(d);
-  result.setFullYear(result.getFullYear() + years);
-  return result;
+    // 提取各个部分
+    let day = 1,
+      hour = 0,
+      minute = 0,
+      month = 1,
+      second = 0,
+      year = 0;
+
+    let index = 1; // 从第 1 个捕获组开始（第 0 个是整个匹配）
+
+    // 按顺序提取年、月、日、时、分、秒
+    if (formatPattern.includes('yyyy')) {
+      year = parseInt(match[index++], 10);
+    }
+    if (formatPattern.includes('MM')) {
+      month = parseInt(match[index++], 10);
+    }
+    if (formatPattern.includes('dd')) {
+      day = parseInt(match[index++], 10);
+    }
+    if (formatPattern.includes('HH')) {
+      hour = parseInt(match[index++], 10);
+    }
+    if (formatPattern.includes('mm')) {
+      minute = parseInt(match[index++], 10);
+    }
+    if (formatPattern.includes('ss')) {
+      second = parseInt(match[index++], 10);
+    }
+
+    // 验证基本范围
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) {
+      return null;
+    }
+
+    const date = new Date(year, month - 1, day, hour, minute, second);
+
+    // 验证日期是否有效（处理如 2月30日 这样的无效日期）
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null;
+    }
+
+    return date;
+  } catch (e) {
+    handleError(e, { context: 'parseDateByFormat', formatPattern, value }, false);
+    return null;
+  }
 }

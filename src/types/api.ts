@@ -3,32 +3,20 @@ import {
   BlockSubType,
   BlockType,
   doOperation,
+  File,
   Notebook,
   NotebookConf,
-  File,
   NotebookId,
-} from '@/types/index.ts';
+} from '@/types';
 
 export enum DataType {
-  markdown = 'markdown',
   dom = 'dom',
+  markdown = 'markdown',
 }
 
-export type PandocArgs = string;
-
-export interface IResGetNotebookConf {
-  box: string;
-  conf: NotebookConf;
-  name: string;
-}
-
-export interface IReslsNotebooks {
-  notebooks: Notebook[];
-}
-
-export interface IResUpload {
-  errFiles: string[];
-  succMap: { [key: string]: string };
+export interface IResBootProgress {
+  details: string;
+  progress: number;
 }
 
 export interface IResdoOperations {
@@ -36,36 +24,13 @@ export interface IResdoOperations {
   undoOperations: doOperation[] | null;
 }
 
-export interface IResGetBlockKramdown {
-  id: BlockId;
-  kramdown: string;
-}
-
-export interface IResGetChildBlock {
-  id: BlockId;
-  type: BlockType;
-  subtype?: BlockSubType;
-}
-
-export interface IResGetTemplates {
-  content: string;
-  path: string;
-}
-
-export interface IResReadDir {
-  isDir: boolean;
-  isSymlink: boolean;
-  name: string;
-}
-
 export interface IResExportMdContent {
-  hPath: string;
   content: string;
+  hPath: string;
 }
 
-export interface IResBootProgress {
-  progress: number;
-  details: string;
+export interface IResExportResources {
+  path: string;
 }
 
 export interface IResForwardProxy {
@@ -77,11 +42,50 @@ export interface IResForwardProxy {
   url: string;
 }
 
-export interface IResExportResources {
-  path: string;
+export interface IResGetBlockKramdown {
+  id: BlockId;
+  kramdown: string;
 }
 
+export interface IResGetChildBlock {
+  id: BlockId;
+  subtype?: BlockSubType;
+  type: BlockType;
+}
+
+export interface IResGetNotebookConf {
+  box: string;
+  conf: NotebookConf;
+  name: string;
+}
+export interface IResGetTemplates {
+  content: string;
+  path: string;
+}
 export interface IResListDocs {
   box: NotebookId;
   files: File[];
 }
+
+export interface IReslsNotebooks {
+  notebooks: Notebook[];
+}
+
+export interface IResOpFile {
+  code: number;
+  data: null;
+  msg: string;
+}
+
+export interface IResReadDir {
+  isDir: boolean;
+  isSymlink: boolean;
+  name: string;
+}
+
+export interface IResUpload {
+  errFiles: string[];
+  succMap: { [key: string]: string };
+}
+
+export type PandocArgs = string;

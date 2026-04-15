@@ -1,4 +1,5 @@
-import { ref, computed, type ComputedRef } from 'vue';
+import { computed, type ComputedRef, ref } from 'vue';
+
 import type { Task } from '@/types';
 
 /**
@@ -10,7 +11,7 @@ export function useTaskSearch(allTasks: ComputedRef<Task[]>) {
   const searchQuery = ref('');
 
   // 防抖定时器
-  let searchTimer: ReturnType<typeof setTimeout> | null = null;
+  let searchTimer: null | ReturnType<typeof setTimeout> = null;
 
   /**
    * 设置搜索关键词（带防抖）
@@ -91,12 +92,12 @@ export function useTaskSearch(allTasks: ComputedRef<Task[]>) {
   const searchResultCount = computed(() => searchedTasks.value.length);
 
   return {
-    searchQuery,
-    setSearchQuery,
     clearSearch,
-    searchedTasks,
     hasActiveSearch,
-    searchResultCount,
     matchesSearch,
+    searchedTasks,
+    searchQuery,
+    searchResultCount,
+    setSearchQuery,
   };
 }

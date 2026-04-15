@@ -1,121 +1,91 @@
-import { ComponentPublicInstance } from 'vue';
-import { FilterStatus } from '@/constants';
 import { Placement } from '@floating-ui/dom';
+import { ComponentPublicInstance } from 'vue';
 
-export type DocumentId = string;
-export type BlockId = string;
-export type NotebookId = string;
-export type PreviousID = BlockId;
-export type ParentID = BlockId | DocumentId;
+import { FilterStatus } from '@/constants';
 
-export interface Notebook {
-  id: NotebookId;
+export enum SyFrontendTypes {
+  // 浏览器 - 桌面端
+  'browser-desktop' = 'browser-desktop',
+  // 浏览器 - 移动端
+  'browser-mobile' = 'browser-mobile',
+  // 桌面端
+  'desktop' = 'desktop',
+  'desktop-window' = 'desktop-window',
+  // 移动端
+  'mobile' = 'mobile',
+}
+export type AppComponent = AppComponentMethods & ComponentPublicInstance;
+export interface Block {
+  alias: string;
+  box: string;
+  content: string;
+  created: string;
+  fcontent?: string;
+  hash: string;
+  hpath: string;
+  ial?: string;
+  id: BlockId;
+  length: number;
+  markdown: string;
+  memo: string;
   name: string;
-  icon: string;
+  parent_id?: BlockId;
+  path: string;
+  root_id: DocumentId;
   sort: number;
-  closed: boolean;
+  subtype: BlockSubType;
+  tag: string;
+  type: BlockType;
+  updated: string;
 }
-
-export interface NotebookConf {
-  name: string;
-  closed: boolean;
-  refCreateSavePath: string;
-  createDocNameTemplate: string;
-  dailyNoteSavePath: string;
-  dailyNoteTemplatePath: string;
+export type BlockId = string;
+export interface BlockInfo {
+  box: string;
+  path: string;
+  rootChildID?: string;
+  rootIcon: string;
+  rootID: string;
+  rootTitle: string;
 }
-
-export type BlockType = 'd' | 's' | 'h' | 't' | 'i' | 'p' | 'f' | 'audio' | 'video' | 'other';
 
 export type BlockSubType =
+  | 'attachment'
+  | 'audio'
+  | 'bookmark'
+  | 'calendar'
+  | 'cite'
+  | 'code'
+  | 'collection'
+  | 'comment'
   | 'd1'
   | 'd2'
-  | 's1'
-  | 's2'
-  | 's3'
-  | 't1'
-  | 't2'
+  | 'footnote'
   | 'h1'
   | 'h2'
   | 'h3'
   | 'h4'
   | 'h5'
   | 'h6'
+  | 'html'
+  | 'image'
+  | 'latex'
+  | 'mindmap'
+  | 'other'
+  | 'quote'
+  | 's1'
+  | 's2'
+  | 's3'
+  | 'spreadsheet'
+  | 't1'
+  | 't2'
   | 'table'
   | 'task'
   | 'toggle'
-  | 'latex'
-  | 'quote'
-  | 'html'
-  | 'code'
-  | 'footnote'
-  | 'cite'
-  | 'collection'
-  | 'bookmark'
-  | 'attachment'
-  | 'comment'
-  | 'mindmap'
-  | 'spreadsheet'
-  | 'calendar'
-  | 'image'
-  | 'audio'
-  | 'video'
-  | 'other';
+  | 'video';
 
-export interface Block {
-  id: BlockId;
-  parent_id?: BlockId;
-  root_id: DocumentId;
-  hash: string;
-  box: string;
-  path: string;
-  hpath: string;
-  name: string;
-  alias: string;
-  memo: string;
-  tag: string;
-  content: string;
-  fcontent?: string;
-  markdown: string;
-  length: number;
-  type: BlockType;
-  subtype: BlockSubType;
-  ial?: string;
-  sort: number;
-  created: string;
-  updated: string;
-}
-export interface File {
-  path: string;
-  name: string;
-  icon: string;
-  name1: string;
-  alias: string;
-  memo: string;
-  bookmark: string;
-  id: string;
-  count: number;
-  size: number;
-  hSize: string;
-  mtime: number;
-  ctime: number;
-  hMtime: string;
-  hCtime: string;
-  sort: number;
-  subFileCount: number;
-  hidden: boolean;
-  newFlashcardCount: number;
-  dueFlashcardCount: number;
-  flashcardCount: number;
-}
-export interface BlockInfo {
-  box: string;
-  path: string;
-  rootChildID?: string;
-  rootID: string;
-  rootIcon: string;
-  rootTitle: string;
-}
+export type BlockType = 'audio' | 'd' | 'f' | 'h' | 'i' | 'other' | 'p' | 's' | 't' | 'video';
+
+export type DocumentId = string;
 
 export interface doOperation {
   action: string;
@@ -126,101 +96,132 @@ export interface doOperation {
   retData: null;
 }
 
-export interface Window {
-  siyuan: {
-    notebooks: any;
-    menus: any;
-    dialogs: any;
-    blockPanels: any;
-    storage: any;
-    user: any;
-    ws: any;
-    languages: any;
-  };
-  _sy_plugin_boilerplate: {
-    [key: string]: any;
-  };
-}
-
-export interface Task {
+export interface File {
+  alias: string;
+  bookmark: string;
+  count: number;
+  ctime: number;
+  dueFlashcardCount: number;
+  flashcardCount: number;
+  hCtime: string;
+  hidden: boolean;
+  hMtime: string;
+  hSize: string;
+  icon: string;
   id: string;
-  box: string;
-  boxTitle: string;
-  hpath: string;
-  rootId: string;
-  rootTitle: string;
-  content: string;
-  markdown: string;
-  created: string;
-  updated: string;
-  attrs: TaskAttrs;
+  memo: string;
+  mtime: number;
+  name: string;
+  name1: string;
+  newFlashcardCount: number;
+  path: string;
+  size: number;
+  sort: number;
+  subFileCount: number;
+}
+export interface I18n {
+  [key: string]: string;
+}
+export interface Notebook {
+  closed: boolean;
+  icon: string;
+  id: NotebookId;
+  name: string;
+  sort: number;
 }
 
-export interface TaskAttrs {
-  start: string;
-  planDue: string;
-  actualDue: string;
-  priority: 'high' | 'medium' | 'normal' | 'low' | string;
-  notes: string;
-  completed: boolean;
+export interface NotebookConf {
+  closed: boolean;
+  createDocNameTemplate: string;
+  dailyNoteSavePath: string;
+  dailyNoteTemplatePath: string;
+  name: string;
+  refCreateSavePath: string;
 }
+
+export type NotebookId = string;
+
+export type ParentID = BlockId | DocumentId;
 
 export interface PluginConfig {
-  defaultProgressGroup: FilterStatus;
   autoHidePopoverDelay: number;
-  filteredNotebooks: string[];
-  filteredBlocks: string[];
   datetimeFormatPattern: string;
+  defaultProgressGroup: FilterStatus;
+  filteredBlocks: string[];
+  filteredNotebooks: string[];
   virtualScrollThreshold: number;
 }
 
 export interface PluginInfo {
-  version: string;
   author: string;
-  name: string;
   description: string;
+  name: string;
+  version: string;
 }
 
 export interface PopoverOptions {
-  placement: Placement;
-  offset?: number;
-  taskId: string;
-  referenceEl: HTMLElement;
+  attrs: null | TaskAttrs;
+  createdDate: null | string;
   isEditable: boolean;
-  attrs: TaskAttrs | null;
-  createdDate: string | null;
+  offset?: number;
+  placement: Placement;
+  referenceEl: HTMLElement;
   referencePoint?: {
     x: number;
     y: number;
   };
+  taskId: string;
 }
 
-export interface I18n {
-  [key: string]: string;
-}
+export type PreviousID = BlockId;
+
 export interface RadioGroupOption {
-  label: string;
-  value: string | number;
   checked: boolean;
+  label: string;
+  value: number | string;
 }
-export enum SyFrontendTypes {
-  // 桌面端
-  'desktop' = 'desktop',
-  'desktop-window' = 'desktop-window',
-  // 移动端
-  'mobile' = 'mobile',
-  // 浏览器 - 桌面端
-  'browser-desktop' = 'browser-desktop',
-  // 浏览器 - 移动端
-  'browser-mobile' = 'browser-mobile',
+export interface Task {
+  attrs: TaskAttrs;
+  box: string;
+  boxTitle: string;
+  content: string;
+  created: string;
+  hpath: string;
+  id: string;
+  markdown: string;
+  rootId: string;
+  rootTitle: string;
+  updated: string;
+}
+export interface TaskAttrs {
+  actualDue: string;
+  completed: boolean;
+  notes: string;
+  planDue: string;
+  priority: 'high' | 'low' | 'medium' | 'normal' | string;
+  start: string;
+}
+
+export interface Window {
+  _sy_plugin_boilerplate: {
+    [key: string]: any;
+  };
+  siyuan: {
+    blockPanels: any;
+    dialogs: any;
+    languages: any;
+    menus: any;
+    notebooks: any;
+    storage: any;
+    user: any;
+    ws: any;
+  };
 }
 
 interface AppComponentMethods {
-  showPopover: (options: PopoverOptions) => void;
   hidePopover: () => void;
+  showPopover: (options: PopoverOptions) => void;
 }
 
-export type AppComponent = ComponentPublicInstance & AppComponentMethods;
-
-export * from './api.ts';
-export * from './task.ts';
+export * from './api';
+export * from './task';

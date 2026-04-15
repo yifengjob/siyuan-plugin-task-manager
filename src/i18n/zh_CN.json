@@ -43,5 +43,8 @@
   "search": "搜索任务...",
   "searchResults": "找到 {count} 个结果",
   "clearSearch": "清除搜索",
-  "noSearchResults": "未找到匹配的任务"
+  "noSearchResults": "未找到匹配的任务",
+  "componentRenderError": "组件渲染失败",
+  "retry": "重试",
+  "unknownError": "未知错误"
 }

@@ -1,13 +1,13 @@
 import { ERROR_MESSAGES } from '@/constants';
-import { msgUtils } from '@/utils/MessageUtils.ts';
+import { msgUtils } from '@/utils/MessageUtils';
 
 /**
  * 错误级别
  */
 export enum ErrorLevel {
+  ERROR = 'error',
   INFO = 'info',
   WARN = 'warn',
-  ERROR = 'error',
 }
 
 /**
@@ -15,18 +15,18 @@ export enum ErrorLevel {
  * 提供统一的错误处理和日志记录
  */
 export class AppError extends Error {
-  public readonly level: ErrorLevel;
   public readonly code?: string;
   public readonly context?: Record<string, unknown>;
+  public readonly level: ErrorLevel;
   public readonly timestamp: number;
 
   constructor(
     message: string,
     options: {
-      level?: ErrorLevel;
+      cause?: Error;
       code?: string;
       context?: Record<string, unknown>;
-      cause?: Error;
+      level?: ErrorLevel;
     } = {}
   ) {
     super(message);
@@ -43,25 +43,25 @@ export class AppError extends Error {
   }
 
   /**
-   * 转换为可序列化的对象
-   */
-  toJSON(): Record<string, unknown> {
-    return {
-      name: this.name,
-      message: this.message,
-      level: this.level,
-      code: this.code,
-      context: this.context,
-      timestamp: this.timestamp,
-      stack: this.stack,
-    };
-  }
-
-  /**
    * 获取友好的错误消息
    */
   getFriendlyMessage(): string {
     return this.message || ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
+
+  /**
+   * 转换为可序列化的对象
+   */
+  toJSON(): Record<string, unknown> {
+    return {
+      code: this.code,
+      context: this.context,
+      level: this.level,
+      message: this.message,
+      name: this.name,
+      stack: this.stack,
+      timestamp: this.timestamp,
+    };
   }
 }
 
@@ -84,6 +84,21 @@ export class ErrorHandler {
       ErrorHandler.instance = new ErrorHandler();
     }
     return ErrorHandler.instance;
+  }
+
+  /**
+   * 清除错误日志
+   */
+  clearErrorLog(): void {
+    this.errorLog = [];
+  }
+
+  /**
+   * 获取最近的错误日志
+   * @param count 获取数量
+   */
+  getRecentErrors(count = 10): AppError[] {
+    return this.errorLog.slice(-count);
   }
 
   /**
@@ -110,11 +125,11 @@ export class ErrorHandler {
           this.showUserNotification(appError);
         }
         break;
-      case ErrorLevel.WARN:
-        console.warn('[TaskManager Warning]', appError);
-        break;
       case ErrorLevel.INFO:
         console.info('[TaskManager Info]', appError);
+        break;
+      case ErrorLevel.WARN:
+        console.warn('[TaskManager Warning]', appError);
         break;
     }
 
@@ -130,7 +145,7 @@ export class ErrorHandler {
   async safeExecute<T>(
     fn: () => Promise<T>,
     errorHandler?: (error: AppError) => void
-  ): Promise<[T | null, AppError | null]> {
+  ): Promise<[null | T, AppError | null]> {
     try {
       const result = await fn();
       return [result, null];
@@ -144,18 +159,15 @@ export class ErrorHandler {
   }
 
   /**
-   * 获取最近的错误日志
-   * @param count 获取数量
+   * 记录错误到日志
    */
-  getRecentErrors(count = 10): AppError[] {
-    return this.errorLog.slice(-count);
-  }
+  private logError(error: AppError): void {
+    this.errorLog.push(error);
 
-  /**
-   * 清除错误日志
-   */
-  clearErrorLog(): void {
-    this.errorLog = [];
+    // 限制日志大小
+    if (this.errorLog.length > this.maxLogSize) {
+      this.errorLog = this.errorLog.slice(-this.maxLogSize);
+    }
   }
 
   /**
@@ -186,18 +198,6 @@ export class ErrorHandler {
   }
 
   /**
-   * 记录错误到日志
-   */
-  private logError(error: AppError): void {
-    this.errorLog.push(error);
-
-    // 限制日志大小
-    if (this.errorLog.length > this.maxLogSize) {
-      this.errorLog = this.errorLog.slice(-this.maxLogSize);
-    }
-  }
-
-  /**
    * 显示用户通知
    */
   private showUserNotification(error: AppError): void {
@@ -210,6 +210,13 @@ export class ErrorHandler {
       console.error('[Notification Error] Failed to show notification:', err);
     });
   }
+}
+
+/**
+ * 便捷函数：获取最近错误
+ */
+export function getRecentErrors(count = 10): AppError[] {
+  return ErrorHandler.getInstance().getRecentErrors(count);
 }
 
 /**
@@ -229,13 +236,6 @@ export function handleError(
 export async function safeExecute<T>(
   fn: () => Promise<T>,
   errorHandler?: (error: AppError) => void
-): Promise<[T | null, AppError | null]> {
+): Promise<[null | T, AppError | null]> {
   return ErrorHandler.getInstance().safeExecute(fn, errorHandler);
-}
-
-/**
- * 便捷函数：获取最近错误
- */
-export function getRecentErrors(count = 10): AppError[] {
-  return ErrorHandler.getInstance().getRecentErrors(count);
 }

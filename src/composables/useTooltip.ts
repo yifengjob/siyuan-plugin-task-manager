@@ -1,12 +1,12 @@
-import { onUnmounted } from 'vue';
 import {
-  computePosition,
+  arrow as arrowMiddleware,
   autoUpdate,
+  computePosition,
+  flip,
   offset,
   shift,
-  flip,
-  arrow as arrowMiddleware,
 } from '@floating-ui/dom';
+import { onUnmounted } from 'vue';
 
 /**
  * Tooltip 功能 Composable
@@ -38,14 +38,14 @@ export function useTooltip() {
       tooltip,
       () => {
         computePosition(reference, tooltip, {
-          placement: 'left',
           middleware: [
             offset(8),
             flip(),
             shift({ padding: 8 }),
             arrowMiddleware({ element: arrow, padding: 4 }),
           ],
-        }).then(({ x, y, placement, middlewareData }) => {
+          placement: 'left',
+        }).then(({ middlewareData, placement, x, y }) => {
           Object.assign(tooltip.style, {
             left: `${x}px`,
             top: `${y}px`,
@@ -54,17 +54,17 @@ export function useTooltip() {
           if (middlewareData.arrow) {
             const { x: arrowX, y: arrowY } = middlewareData.arrow;
             const staticSide = {
-              top: 'bottom',
-              right: 'left',
               bottom: 'top',
               left: 'right',
+              right: 'left',
+              top: 'bottom',
             }[placement.split('-')[0]];
             Object.assign(arrow.style, {
-              left: arrowX !== null ? `${arrowX}px` : '',
-              top: arrowY !== null ? `${arrowY}px` : '',
-              right: '',
               bottom: '',
+              left: arrowX !== null ? `${arrowX}px` : '',
+              right: '',
               [staticSide ?? '']: '-4px',
+              top: arrowY !== null ? `${arrowY}px` : '',
             });
           }
         });
@@ -108,8 +108,8 @@ export function useTooltip() {
   });
 
   return {
+    destroyTooltip,
     onMouseEnter,
     onMouseLeave,
-    destroyTooltip,
   };
 }

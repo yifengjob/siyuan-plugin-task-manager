@@ -1,6 +1,6 @@
 import TaskManagerPlugin from '@/main';
 
-let plugin: TaskManagerPlugin | null = null;
+let plugin: null | TaskManagerPlugin = null;
 
 export const setPlugin = (pluginInstance: TaskManagerPlugin) => {
   plugin = pluginInstance;

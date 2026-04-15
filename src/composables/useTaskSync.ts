@@ -1,15 +1,17 @@
-import { ref, onMounted, onUnmounted } from 'vue';
 import type { IWebSocketData } from 'siyuan';
+
+import { onMounted, onUnmounted, ref } from 'vue';
+
+import {
+  CACHE_CLEANUP_INTERVAL,
+  CACHE_EXPIRY_TIME,
+  DEBOUNCE_DELAY,
+  MAX_CACHED_BLOCK_IDS,
+  THROTTLE_DELAY,
+} from '@/constants';
 import { useTaskStore } from '@/stores/tasks.store';
 import { usePlugin } from '@/utils';
 import { handleError } from '@/utils/ErrorHandler';
-import {
-  THROTTLE_DELAY,
-  DEBOUNCE_DELAY,
-  MAX_CACHED_BLOCK_IDS,
-  CACHE_EXPIRY_TIME,
-  CACHE_CLEANUP_INTERVAL,
-} from '@/constants';
 
 /**
  * 任务数据加载和同步逻辑 Composable
@@ -21,13 +23,13 @@ export function useTaskSync() {
 
   // 加载状态
   const isLoading = ref(false);
-  const loadError = ref<string | null>(null);
+  const loadError = ref<null | string>(null);
 
   // 缓存已处理的块 ID，用于节流
   const processedBlockIds = new Map<string, number>();
 
   // 刷新定时器
-  let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  let refreshTimer: null | ReturnType<typeof setTimeout> = null;
 
   /**
    * 清理过期的缓存
@@ -195,12 +197,12 @@ export function useTaskSync() {
   });
 
   return {
+    cleanup,
+    debouncedRefresh,
+    handleRefresh,
+    handleWsMain,
     isLoading,
     loadError,
     loadTasks,
-    handleRefresh,
-    debouncedRefresh,
-    handleWsMain,
-    cleanup,
   };
 }

@@ -1,23 +1,24 @@
-import { resolve } from 'node:path';
+/* eslint-disable no-console */
 import vue from '@vitejs/plugin-vue';
 import fg from 'fast-glob';
-import minimist from 'minimist';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import livereload from 'rollup-plugin-livereload';
-import { defineConfig, loadEnv, type ConfigEnv, type UserConfig } from 'vite';
+import { type ConfigEnv, defineConfig, loadEnv, type UserConfig } from 'vite';
+import removeConsole from 'vite-plugin-remove-console';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import zipPack from 'vite-plugin-zip-pack';
-import removeConsole from 'vite-plugin-remove-console';
 
 import pluginInfo from './plugin.json';
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
 /**
- * 创建监听外部文件变化的插件（用于热重载）
- * @returns Vite/Rolldown 插件实例
+ * 创建监听外部文件变化的插件(用于热重载)
+ * @returns Rolldown 插件实例
  */
 function createWatchExternalPlugin() {
   return {
-    name: 'watch-external',
-
     async buildStart(this: any) {
       const files = await fg([
         'src/i18n/*.json',
@@ -32,105 +33,51 @@ function createWatchExternalPlugin() {
         this.addWatchFile(file);
       }
     },
+
+    name: 'watch-external',
   };
 }
 
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
-  console.log('mode=>', mode);
+  // 加载环境变量
   const env = loadEnv(mode, process.cwd());
   const { VITE_SIYUAN_WORKSPACE_PATH } = env;
-  console.log('env=>', env);
 
+  // 确定输出目录和构建模式
+  const isDevMode = mode === 'development';
   const siyuanWorkspacePath = VITE_SIYUAN_WORKSPACE_PATH;
+
   let devDistDir = './dev';
-  if (!siyuanWorkspacePath) {
-    console.log('\nSiyuan workspace path is not set.');
-  } else {
-    console.log(`\nSiyuan workspace path is set:\n${siyuanWorkspacePath}`);
+  if (siyuanWorkspacePath) {
+    console.log(`\nSiyuan workspace path:\n${siyuanWorkspacePath}`);
     devDistDir = `${siyuanWorkspacePath}/data/plugins/${pluginInfo.name}`;
+  } else {
+    console.warn('\n⚠️  Siyuan workspace path is not set in .env file');
   }
-  console.log(`\nPlugin will build to:\n${devDistDir}`);
 
-  const args = minimist(process.argv.slice(2));
-  const isWatch = args.watch || args.w || false;
-  const distDir = isWatch ? devDistDir : './dist';
+  const distDir = isDevMode ? devDistDir : './dist';
 
-  console.log();
-  console.log('isWatch=>', isWatch);
-  console.log('distDir=>', distDir);
+  console.log(`\nBuild configuration:`);
+  console.log(`  Mode: ${mode}`);
+  console.log(`  Dev Mode: ${isDevMode}`);
+  console.log(`  Output: ${distDir}\n`);
 
   return {
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
-      },
-    },
+    base: './',
 
-    plugins: [
-      // vue({ vapor: true }), // vue 3.6 以上版本已支持
-      vue(),
-      viteStaticCopy({
-        targets: [
-          {
-            src: './README*.md',
-            dest: './',
-          },
-          {
-            src: './icon.png',
-            dest: './',
-          },
-          {
-            src: './preview.png',
-            dest: './',
-          },
-          {
-            src: './plugin.json',
-            dest: './',
-          },
-          {
-            src: './src/i18n/*.json',
-            dest: './i18n',
-            rename: { stripBase: 2 },
-          },
-        ],
-      }),
-    ],
-
-    define: {
-      'process.env.DEV_MODE': `"${isWatch}"`,
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-    },
-
+    // 构建配置
     build: {
-      outDir: distDir,
-      emptyOutDir: !isWatch,
-      sourcemap: false,
-      minify: isWatch ? false : 'oxc',
+      emptyOutDir: !isDevMode,
       lib: {
         entry: resolve(__dirname, 'src/main.ts'),
         fileName: 'index',
         formats: ['cjs'],
       },
+      minify: isDevMode ? false : 'oxc',
+      outDir: distDir,
       rolldownOptions: {
-        plugins: [
-          ...(isWatch
-            ? [livereload(devDistDir), createWatchExternalPlugin()]
-            : [
-                zipPack({
-                  inDir: './dist',
-                  outDir: './build',
-                  outFileName: 'package.zip',
-                }),
-                removeConsole({
-                  includes: ['log', 'warn', 'error', 'info', 'debug'],
-                }),
-              ]),
-        ],
         external: ['siyuan', 'process'],
-        treeshake: true,
         output: {
-          // entryFileNames: '[name].js',
-          entryFileNames: 'index.js',
           assetFileNames: (assetInfo) => {
             const assetName =
               Array.isArray(assetInfo.names) && assetInfo.names.length > 0
@@ -139,14 +86,58 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
             if (assetName?.endsWith('.css')) {
               return 'index.css';
             }
-            if (!assetName) {
-              return 'assets/[name].[ext]';
-            }
-            return assetName;
+            return assetName ?? 'assets/[name].[ext]';
           },
+          // entryFileNames: '[name].js',
+          entryFileNames: 'index.js',
         },
+        plugins: isDevMode
+          ? []
+          : [
+              zipPack({
+                inDir: './dist',
+                outDir: './build',
+                outFileName: 'package.zip',
+              }),
+              removeConsole({
+                includes: ['log', 'warn', 'error', 'info', 'debug'],
+              }),
+            ],
+        treeshake: true,
       },
+      sourcemap: false,
     },
-    base: './',
+
+    // 环境变量注入
+    define: {
+      'process.env.DEV_MODE': JSON.stringify(isDevMode),
+      'process.env.NODE_ENV': JSON.stringify(mode),
+    },
+
+    // 插件配置
+    plugins: [
+      // vue({ vapor: true }), // vue 3.6 以上版本支持
+      vue(),
+      viteStaticCopy({
+        targets: [
+          { dest: '.', src: './README*.md' },
+          { dest: '.', src: './icon.png' },
+          { dest: '.', src: './preview.png' },
+          { dest: '.', src: './plugin.json' },
+          {
+            dest: './i18n',
+            rename: { stripBase: 2 },
+            src: './src/i18n/*.json',
+          },
+        ],
+      }),
+      // 开发模式下添加热重载插件
+      ...(isDevMode ? [livereload(devDistDir), createWatchExternalPlugin()] : []),
+    ],
+
+    // 解析配置
+    resolve: {
+      tsconfigPaths: true,
+    },
   };
 });

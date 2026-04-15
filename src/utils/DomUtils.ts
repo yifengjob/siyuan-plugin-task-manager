@@ -1,6 +1,8 @@
 // src/utils/DomUtils.ts
 
-import { IProtyle } from 'siyuan';
+import { IProtyle, Lute } from 'siyuan';
+
+import { AppError, ErrorLevel, handleError } from '@/utils/ErrorHandler';
 
 /**
  * 从点击事件中提取目标元素
@@ -24,10 +26,10 @@ export const isElementEditable = (element: HTMLElement): boolean => {
  * @returns 目标元素和原始鼠标事件
  */
 export const getClickTargetFromEvent = (
-  eventData: CustomEvent<{ protyle: IProtyle; event: MouseEvent }>
+  eventData: CustomEvent<{ event: MouseEvent; protyle: IProtyle }>
 ): {
-  targetElement: HTMLElement | null;
   originalEvent: MouseEvent | null;
+  targetElement: HTMLElement | null;
 } => {
   const detail = eventData.detail;
   let targetElement: HTMLElement | null = null;
@@ -46,8 +48,8 @@ export const getClickTargetFromEvent = (
   }
 
   return {
-    targetElement,
     originalEvent,
+    targetElement,
   };
 };
 
@@ -96,8 +98,46 @@ export const findTaskElementFromBlockId = (blockId: string): HTMLElement | null 
   return null;
 };
 
-export const getBlockIdFromElement = (element: HTMLElement): string | null => {
+export const getBlockIdFromElement = (element: HTMLElement): null | string => {
   const blockId = element.getAttribute('data-node-id');
   if (blockId) return blockId;
+  return null;
+};
+
+/**
+ * 使用 Lute 渲染 Markdown 为 HTML
+ *
+ * @param markdown - Markdown 文本
+ * @param stripTaskMarker - 是否去除任务标记（如：- [ ]、- [x] 等），默认为 false
+ * @returns 渲染后的 HTML 字符串或 null
+ */
+export const renderMarkdownWithLute = (
+  markdown: string,
+  stripTaskMarker: boolean = false
+): null | string => {
+  if (!window.Lute) return null;
+  try {
+    let processedMarkdown = markdown;
+
+    // 如果需要去除任务标记
+    if (stripTaskMarker) {
+      // 匹配并去除行首的任务标记：- [ ]、- [x]、- [X]、* [ ]、+ [ ] 等
+      processedMarkdown = markdown.replace(/^\s*[-*+]\s+\[[ xX]]\s+/m, '');
+    }
+
+    const lute: Lute = window.Lute.New();
+    if (lute && typeof lute.MarkdownStr === 'function') {
+      return lute.MarkdownStr('', processedMarkdown);
+    }
+  } catch (e) {
+    handleError(
+      new AppError(`Lute 渲染失败:${e}`),
+      {
+        action: 'renderMarkdownWithLute',
+        level: ErrorLevel.ERROR,
+      },
+      false
+    );
+  }
   return null;
 };

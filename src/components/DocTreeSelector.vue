@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { apiService } from '@/services/ApiService';
-import type { PluginConfigManager } from '@/utils';
+
 import type { I18n } from '@/types';
+import type { PluginConfigManager } from '@/utils';
+
+import { apiService } from '@/services/ApiService';
 import {
   findNode,
   findPath,
@@ -10,7 +12,7 @@ import {
   setChildrenChecked,
   type TreeNodeBase,
   updateIndeterminateState,
-} from '@/utils/TreeUtils.ts';
+} from '@/utils';
 import { handleError } from '@/utils/ErrorHandler';
 
 const props = defineProps<{
@@ -19,7 +21,7 @@ const props = defineProps<{
 }>();
 
 const loading = ref(true);
-const error = ref<string | null>(null);
+const error = ref<null | string>(null);
 const treeData = ref<TreeNode[]>([]);
 const loadingProgress = ref<number>(0); // 新增：加载进度
 const loadingStatus = ref<string>(''); // 新增：加载状态信息
@@ -30,12 +32,244 @@ const MAX_RETRY_ATTEMPTS = 3; // 最大重试次数
 const RETRY_BASE_DELAY = 500; // 重试基础延迟（毫秒）
 
 interface TreeNode extends TreeNodeBase {
-  icon?: string;
+  box?: string;
   childrenLoaded: boolean;
   hasChildren: boolean;
-  box?: string;
+  icon?: string;
   path: string;
 }
+function collapseAll() {
+  setAllExpanded(treeData.value, false);
+  treeData.value = [...treeData.value];
+}
+
+async function expandAll() {
+  await loadAllChildren(treeData.value);
+  setAllExpanded(treeData.value, true);
+  treeData.value = [...treeData.value];
+}
+
+async function handleNodeUpdate(updatedNode: TreeNode) {
+  const target = findNode(treeData.value, updatedNode.id, updatedNode.type);
+  if (!target) return;
+
+  target.checked = updatedNode.checked;
+  target.indeterminate = false;
+
+  if (updatedNode.checked) {
+    // 勾选时：加载并勾选所有后代
+    await loadAllDescendants(target);
+    setChildrenChecked(target, true);
+  } else {
+    // 取消勾选时：只需取消当前节点，子节点会自动取消（setChildrenChecked）
+    setChildrenChecked(target, false);
+  }
+
+  // 关键修复：重新计算整棵树的半选状态，确保所有祖先节点状态正确
+  updateIndeterminateState(treeData.value);
+
+  await updateConfig();
+  treeData.value = [...treeData.value];
+}
+
+function handleToggleExpand(node: TreeNode) {
+  if (!node.childrenLoaded && node.hasChildren) {
+    loadChildren(node).then(() => {
+      node.expanded = true;
+      treeData.value = [...treeData.value];
+    });
+  } else {
+    node.expanded = !node.expanded;
+    treeData.value = [...treeData.value];
+  }
+}
+
+/**
+ * 初始化树的勾选状态
+ * 策略：
+ * 1. 先应用笔记本的勾选状态
+ * 2. 再应用文档块的勾选状态（但如果父节点已勾选则跳过）
+ * 3. 最后计算半选状态
+ */
+function initCheckedState(
+  nodes: TreeNode[],
+  filteredNotebooks: string[],
+  filteredBlocks: string[]
+) {
+  // 第一步：设置笔记本的勾选状态
+  for (const node of nodes) {
+    if (node.type === 'notebook') {
+      node.checked = filteredNotebooks.includes(node.id);
+      node.indeterminate = false;
+    }
+    initCheckedState(node.children, filteredNotebooks, filteredBlocks);
+  }
+
+  // 第二步：设置文档块的勾选状态
+  const applyBlockChecked = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      if (node.type === 'doc') {
+        // 只有当父节点没有被勾选时，才应用 filteredBlocks 配置
+        const parentChecked = isParentCheckedInInit(node, filteredNotebooks, filteredBlocks);
+        if (!parentChecked) {
+          node.checked = filteredBlocks.includes(node.id);
+          node.indeterminate = false;
+        }
+      }
+      applyBlockChecked(node.children);
+    }
+  };
+  applyBlockChecked(nodes);
+
+  // 第三步：如果笔记本被勾选，强制其所有后代都被勾选
+  const enforceNotebookChecked = (node: TreeNode) => {
+    if (node.type === 'notebook' && node.checked) {
+      setChildrenChecked(node, true);
+    } else {
+      for (const child of node.children) {
+        enforceNotebookChecked(child);
+      }
+    }
+  };
+  for (const node of nodes) {
+    enforceNotebookChecked(node);
+  }
+}
+
+/**
+ * 检查节点的父节点是否被勾选
+ */
+function isParentChecked(node: TreeNode): boolean {
+  const path = findPath(treeData.value, node.id, node.type);
+  if (!path || path.length < 2) return false;
+
+  // 检查所有祖先节点是否有被勾选的
+  for (let i = 0; i < path.length - 1; i++) {
+    if (path[i].checked && !path[i].indeterminate) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 在初始化时检查节点的父节点是否在配置中被勾选
+ */
+function isParentCheckedInInit(
+  node: TreeNode,
+  filteredNotebooks: string[],
+  filteredBlocks: string[]
+): boolean {
+  const path = findPath(treeData.value, node.id, node.type);
+  if (!path || path.length < 2) return false;
+
+  // 检查所有祖先节点
+  for (let i = 0; i < path.length - 1; i++) {
+    const ancestor = path[i];
+    if (ancestor.type === 'notebook') {
+      if (filteredNotebooks.includes(ancestor.id)) {
+        return true;
+      }
+    } else {
+      if (filteredBlocks.includes(ancestor.id)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * 递归加载所有节点的子节点（用于展开全部）
+ */
+async function loadAllChildren(nodes: TreeNode[]) {
+  for (const node of nodes) {
+    if (node.hasChildren && !node.childrenLoaded) {
+      await loadChildren(node);
+    }
+    if (node.children.length) {
+      await loadAllChildren(node.children);
+    }
+  }
+}
+
+async function loadAllDescendants(node: TreeNode) {
+  if (!node.childrenLoaded && node.hasChildren) {
+    await loadChildren(node);
+  }
+  for (const child of node.children) {
+    await loadAllDescendants(child);
+  }
+}
+
+async function loadChildren(node: TreeNode) {
+  if (node.childrenLoaded) return;
+
+  try {
+    let notebookId: string;
+    let path: string;
+
+    if (node.type === 'notebook') {
+      notebookId = node.id;
+      path = '/';
+    } else {
+      if (!node.box) {
+        handleError(
+          new Error(`Document node ${node.id} missing box property`),
+          { action: 'loadChildren', nodeId: node.id },
+          false
+        );
+        node.childrenLoaded = true;
+        node.hasChildren = false;
+        return;
+      }
+      notebookId = node.box;
+      path = node.path;
+    }
+
+    const result = await apiService.listDocsByPath(notebookId, path);
+    if (!result?.files) {
+      node.childrenLoaded = true;
+      node.hasChildren = false;
+      return;
+    }
+
+    const existingChildrenMap = new Map(node.children.map((c) => [c.id, c]));
+    const config = props.configManager.getConfig();
+    const filteredBlocks = config.filteredBlocks || [];
+
+    const newChildren = result.files.map((file) => {
+      const existing = existingChildrenMap.get(file.id);
+      let checked = existing ? existing.checked : false;
+      if (!existing) {
+        checked = filteredBlocks.includes(file.id);
+      }
+      return {
+        box: notebookId,
+        checked,
+        children: [],
+        childrenLoaded: existing ? existing.childrenLoaded : false,
+        expanded: existing ? existing.expanded : false,
+        hasChildren: file.subFileCount > 0,
+        icon: file.icon || '',
+        id: file.id,
+        indeterminate: false,
+        name: file.name.replace(/\.sy$/, ''),
+        path: file.path,
+        type: 'doc' as const,
+      };
+    });
+
+    node.children = newChildren;
+    node.childrenLoaded = true;
+    node.hasChildren = newChildren.length > 0;
+  } catch (err) {
+    handleError(err, { action: 'loadChildren', nodeId: node.id }, false);
+    node.childrenLoaded = true;
+    node.hasChildren = false;
+  }
+}
+
 /**
  * 带重试机制的节点加载函数
  * 使用指数退避策略进行重试
@@ -56,9 +290,9 @@ async function loadChildrenWithRetry(
         err,
         {
           action: 'loadChildrenWithRetry',
-          nodeId: node.id,
           attempt: attempt + 1,
           maxRetries,
+          nodeId: node.id,
         },
         false
       );
@@ -79,6 +313,27 @@ async function loadChildrenWithRetry(
   );
   node.childrenLoaded = true;
   node.hasChildren = false;
+}
+/**
+ * 加载树中所有节点的完整子节点列表，确保半选状态计算准确
+ * 性能优化：
+ * 1. 使用并发控制批量加载
+ * 2. 带重试机制的错误处理
+ * 3. 进度反馈
+ */
+async function loadFullTree(nodes: TreeNode[]) {
+  loadingStatus.value = '开始加载文档树...';
+  loadingProgress.value = 0;
+
+  try {
+    await loadNodesBatch(nodes, BATCH_CONCURRENCY_LIMIT);
+  } catch (err) {
+    handleError(err, { action: 'loadFullTree' });
+    throw err;
+  } finally {
+    loadingProgress.value = 100;
+    loadingStatus.value = '';
+  }
 }
 
 /**
@@ -139,135 +394,20 @@ async function loadNotebooks() {
   const tree: TreeNode[] = [];
   for (const notebook of notebooks.notebooks) {
     tree.push({
-      id: notebook.id,
-      name: notebook.name,
-      type: 'notebook',
-      children: [],
       checked: false,
-      indeterminate: false,
-      expanded: false,
+      children: [],
       childrenLoaded: false,
+      expanded: false,
       hasChildren: true,
+      id: notebook.id,
+      indeterminate: false,
+      name: notebook.name,
       path: '/',
+      type: 'notebook',
     });
   }
   return tree;
 }
-
-async function loadChildren(node: TreeNode) {
-  if (node.childrenLoaded) return;
-
-  try {
-    let notebookId: string;
-    let path: string;
-
-    if (node.type === 'notebook') {
-      notebookId = node.id;
-      path = '/';
-    } else {
-      if (!node.box) {
-        handleError(
-          new Error(`Document node ${node.id} missing box property`),
-          { action: 'loadChildren', nodeId: node.id },
-          false
-        );
-        node.childrenLoaded = true;
-        node.hasChildren = false;
-        return;
-      }
-      notebookId = node.box;
-      path = node.path;
-    }
-
-    const result = await apiService.listDocsByPath(notebookId, path);
-    if (!result?.files) {
-      node.childrenLoaded = true;
-      node.hasChildren = false;
-      return;
-    }
-
-    const existingChildrenMap = new Map(node.children.map((c) => [c.id, c]));
-    const config = props.configManager.getConfig();
-    const filteredBlocks = config.filteredBlocks || [];
-
-    const newChildren = result.files.map((file) => {
-      const existing = existingChildrenMap.get(file.id);
-      let checked = existing ? existing.checked : false;
-      if (!existing) {
-        checked = filteredBlocks.includes(file.id);
-      }
-      return {
-        id: file.id,
-        name: file.name.replace(/\.sy$/, ''),
-        type: 'doc' as const,
-        children: [],
-        checked,
-        indeterminate: false,
-        expanded: existing ? existing.expanded : false,
-        childrenLoaded: existing ? existing.childrenLoaded : false,
-        hasChildren: file.subFileCount > 0,
-        icon: file.icon || '',
-        box: notebookId,
-        path: file.path,
-      };
-    });
-
-    node.children = newChildren;
-    node.childrenLoaded = true;
-    node.hasChildren = newChildren.length > 0;
-  } catch (err) {
-    handleError(err, { action: 'loadChildren', nodeId: node.id }, false);
-    node.childrenLoaded = true;
-    node.hasChildren = false;
-  }
-}
-
-async function loadAllDescendants(node: TreeNode) {
-  if (!node.childrenLoaded && node.hasChildren) {
-    await loadChildren(node);
-  }
-  for (const child of node.children) {
-    await loadAllDescendants(child);
-  }
-}
-
-/**
- * 递归加载所有节点的子节点（用于展开全部）
- */
-async function loadAllChildren(nodes: TreeNode[]) {
-  for (const node of nodes) {
-    if (node.hasChildren && !node.childrenLoaded) {
-      await loadChildren(node);
-    }
-    if (node.children.length) {
-      await loadAllChildren(node.children);
-    }
-  }
-}
-
-function handleToggleExpand(node: TreeNode) {
-  if (!node.childrenLoaded && node.hasChildren) {
-    loadChildren(node).then(() => {
-      node.expanded = true;
-      treeData.value = [...treeData.value];
-    });
-  } else {
-    node.expanded = !node.expanded;
-    treeData.value = [...treeData.value];
-  }
-}
-
-async function expandAll() {
-  await loadAllChildren(treeData.value);
-  setAllExpanded(treeData.value, true);
-  treeData.value = [...treeData.value];
-}
-
-function collapseAll() {
-  setAllExpanded(treeData.value, false);
-  treeData.value = [...treeData.value];
-}
-
 /**
  * 刷新已勾选节点的子节点（用于更新配置前确保数据完整）
  */
@@ -285,174 +425,6 @@ async function refreshCheckedNodes() {
 
   for (const node of nodesToRefresh) {
     await loadChildren(node);
-  }
-}
-
-async function updateConfig() {
-  await refreshCheckedNodes();
-  const filteredNotebooks: string[] = [];
-  const filteredBlocks: string[] = [];
-
-  // 收集所有选中的节点，但需要智能处理父子关系
-  const collectSelectedSmart = (nodes: TreeNode[]) => {
-    for (const node of nodes) {
-      if (node.type === 'notebook') {
-        // 笔记本：只有当它被直接勾选（不是半选）时才保存
-        if (node.checked && !node.indeterminate) {
-          filteredNotebooks.push(node.id);
-        }
-      } else {
-        // 文档块：只有当父节点没有被勾选时才保存
-        // 这样可以避免重复保存（父节点勾选会自动包含所有子节点）
-        const parentChecked = isParentChecked(node);
-        if (node.checked && !parentChecked) {
-          filteredBlocks.push(node.id);
-        }
-      }
-      collectSelectedSmart(node.children);
-    }
-  };
-
-  collectSelectedSmart(treeData.value);
-
-  props.configManager.updateConfig('filteredNotebooks', filteredNotebooks);
-  props.configManager.updateConfig('filteredBlocks', filteredBlocks);
-}
-/**
- * 检查节点的父节点是否被勾选
- */
-function isParentChecked(node: TreeNode): boolean {
-  const path = findPath(treeData.value, node.id, node.type);
-  if (!path || path.length < 2) return false;
-
-  // 检查所有祖先节点是否有被勾选的
-  for (let i = 0; i < path.length - 1; i++) {
-    if (path[i].checked && !path[i].indeterminate) {
-      return true;
-    }
-  }
-  return false;
-}
-
-async function handleNodeUpdate(updatedNode: TreeNode) {
-  const target = findNode(treeData.value, updatedNode.id, updatedNode.type);
-  if (!target) return;
-
-  target.checked = updatedNode.checked;
-  target.indeterminate = false;
-
-  if (updatedNode.checked) {
-    // 勾选时：加载并勾选所有后代
-    await loadAllDescendants(target);
-    setChildrenChecked(target, true);
-  } else {
-    // 取消勾选时：只需取消当前节点，子节点会自动取消（setChildrenChecked）
-    setChildrenChecked(target, false);
-  }
-
-  // 关键修复：重新计算整棵树的半选状态，确保所有祖先节点状态正确
-  updateIndeterminateState(treeData.value);
-
-  await updateConfig();
-  treeData.value = [...treeData.value];
-}
-
-/**
- * 初始化树的勾选状态
- * 策略：
- * 1. 先应用笔记本的勾选状态
- * 2. 再应用文档块的勾选状态（但如果父节点已勾选则跳过）
- * 3. 最后计算半选状态
- */
-function initCheckedState(
-  nodes: TreeNode[],
-  filteredNotebooks: string[],
-  filteredBlocks: string[]
-) {
-  // 第一步：设置笔记本的勾选状态
-  for (const node of nodes) {
-    if (node.type === 'notebook') {
-      node.checked = filteredNotebooks.includes(node.id);
-      node.indeterminate = false;
-    }
-    initCheckedState(node.children, filteredNotebooks, filteredBlocks);
-  }
-
-  // 第二步：设置文档块的勾选状态
-  const applyBlockChecked = (nodes: TreeNode[]) => {
-    for (const node of nodes) {
-      if (node.type === 'doc') {
-        // 只有当父节点没有被勾选时，才应用 filteredBlocks 配置
-        const parentChecked = isParentCheckedInInit(node, filteredNotebooks, filteredBlocks);
-        if (!parentChecked) {
-          node.checked = filteredBlocks.includes(node.id);
-          node.indeterminate = false;
-        }
-      }
-      applyBlockChecked(node.children);
-    }
-  };
-  applyBlockChecked(nodes);
-
-  // 第三步：如果笔记本被勾选，强制其所有后代都被勾选
-  const enforceNotebookChecked = (node: TreeNode) => {
-    if (node.type === 'notebook' && node.checked) {
-      setChildrenChecked(node, true);
-    } else {
-      for (const child of node.children) {
-        enforceNotebookChecked(child);
-      }
-    }
-  };
-  for (const node of nodes) {
-    enforceNotebookChecked(node);
-  }
-}
-/**
- * 在初始化时检查节点的父节点是否在配置中被勾选
- */
-function isParentCheckedInInit(
-  node: TreeNode,
-  filteredNotebooks: string[],
-  filteredBlocks: string[]
-): boolean {
-  const path = findPath(treeData.value, node.id, node.type);
-  if (!path || path.length < 2) return false;
-
-  // 检查所有祖先节点
-  for (let i = 0; i < path.length - 1; i++) {
-    const ancestor = path[i];
-    if (ancestor.type === 'notebook') {
-      if (filteredNotebooks.includes(ancestor.id)) {
-        return true;
-      }
-    } else {
-      if (filteredBlocks.includes(ancestor.id)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-/**
- * 加载树中所有节点的完整子节点列表，确保半选状态计算准确
- * 性能优化：
- * 1. 使用并发控制批量加载
- * 2. 带重试机制的错误处理
- * 3. 进度反馈
- */
-async function loadFullTree(nodes: TreeNode[]) {
-  loadingStatus.value = '开始加载文档树...';
-  loadingProgress.value = 0;
-
-  try {
-    await loadNodesBatch(nodes, BATCH_CONCURRENCY_LIMIT);
-  } catch (err) {
-    handleError(err, { action: 'loadFullTree' });
-    throw err;
-  } finally {
-    loadingProgress.value = 100;
-    loadingStatus.value = '';
   }
 }
 /**
@@ -490,6 +462,36 @@ async function reinitializeTreeState() {
 
   return tree;
 }
+async function updateConfig() {
+  await refreshCheckedNodes();
+  const filteredNotebooks: string[] = [];
+  const filteredBlocks: string[] = [];
+
+  // 收集所有选中的节点，但需要智能处理父子关系
+  const collectSelectedSmart = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      if (node.type === 'notebook') {
+        // 笔记本：只有当它被直接勾选（不是半选）时才保存
+        if (node.checked && !node.indeterminate) {
+          filteredNotebooks.push(node.id);
+        }
+      } else {
+        // 文档块：只有当父节点没有被勾选时才保存
+        // 这样可以避免重复保存（父节点勾选会自动包含所有子节点）
+        const parentChecked = isParentChecked(node);
+        if (node.checked && !parentChecked) {
+          filteredBlocks.push(node.id);
+        }
+      }
+      collectSelectedSmart(node.children);
+    }
+  };
+
+  collectSelectedSmart(treeData.value);
+
+  props.configManager.updateConfig('filteredNotebooks', filteredNotebooks);
+  props.configManager.updateConfig('filteredBlocks', filteredBlocks);
+}
 
 onMounted(async () => {
   try {
@@ -497,7 +499,7 @@ onMounted(async () => {
     treeData.value = [...tree];
   } catch (err: unknown) {
     // 类型安全的错误处理
-    error.value = err instanceof Error ? err.message : '未知错误';
+    error.value = err instanceof Error ? err.message : props.i18n.unknownError;
     handleError(err, { context: 'InitializeTree' }, false);
   } finally {
     loading.value = false;
@@ -518,15 +520,15 @@ export default {
   <div class="doc-tree-selector">
     <div class="tree-toolbar">
       <button class="tree-toolbar-btn b3-button b3-button--outline" @click="expandAll">
-        {{ i18n.expandAll || '全部展开' }}
+        {{ i18n.expandAll }}
       </button>
       <button class="tree-toolbar-btn b3-button b3-button--outline" @click="collapseAll">
-        {{ i18n.collapseAll || '全部折叠' }}
+        {{ i18n.collapseAll }}
       </button>
     </div>
 
     <div v-if="loading" class="loading">
-      {{ i18n.loading || '加载中...' }}
+      {{ i18n.loading }}
       <div v-if="loadingStatus" class="loading-progress">
         <div class="progress-bar">
           <div class="progress-fill" :style="{ width: loadingProgress + '%' }"></div>

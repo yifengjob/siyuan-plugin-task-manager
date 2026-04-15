@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import type { PopoverOptions, TaskAttrs } from '@/types';
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
-import { usePlugin } from '@/utils';
 import {
-  computePosition,
-  autoUpdate,
-  offset,
-  shift,
-  flip,
   arrow as arrowMiddleware,
+  autoUpdate,
+  computePosition,
+  flip,
+  offset,
   type Placement,
+  shift,
 } from '@floating-ui/dom';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+
+import type { PopoverOptions, TaskAttrs } from '@/types';
+
 import DateTimePickerField from '@/components/DateTimePickerField.vue';
-import { formatDate } from '@/utils/DateTimeUtils';
+import { DATE_PICKER_SELECTORS, POPOVER_HIDE_DELAY, SCROLL_CONTAINER_SELECTORS } from '@/constants';
 import { useConfigStore } from '@/stores/config.store';
-import { POPOVER_HIDE_DELAY, DATE_PICKER_SELECTORS, SCROLL_CONTAINER_SELECTORS } from '@/constants';
+import { usePlugin } from '@/utils';
+import { formatDate } from '@/utils/DateTimeUtils';
 
 // ============ Props & Emits ============
 const props = defineProps<{
-  options: PopoverOptions | null;
+  options: null | PopoverOptions;
 }>();
 
 const emit = defineEmits<{
@@ -41,11 +43,11 @@ const arrowRef = ref<HTMLElement | null>(null);
 // ============ State ============
 const isVisible = ref(false);
 const placement = ref<Placement>('bottom'); // 当前实际使用的方向
-let hideTimer: ReturnType<typeof setTimeout> | null = null;
-let autoCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let hideTimer: null | ReturnType<typeof setTimeout> = null;
+let autoCloseTimer: null | ReturnType<typeof setTimeout> = null;
 let focusCount = 0;
 let referenceElement: HTMLElement | null = null;
-let referencePoint: { x: number; y: number } | null = null;
+let referencePoint: null | { x: number; y: number } = null;
 let scrollListeners: (() => void)[] = [];
 const currentBlockId = ref<string | undefined>(undefined);
 let cleanupAutoUpdate: (() => void) | null = null;
@@ -56,15 +58,15 @@ let isSwitchingTask = false;
 interface VirtualReference {
   getBoundingClientRect: () => DOMRect;
 }
-let virtualReference: VirtualReference | null = null;
+let virtualReference: null | VirtualReference = null;
 
 // ============ Form Data ============
 const form = ref({
-  start: '',
-  planDue: '',
   actualDue: '',
-  priority: 'normal',
   notes: '',
+  planDue: '',
+  priority: 'normal',
+  start: '',
 });
 
 // ============ Computed Properties ============
@@ -77,22 +79,22 @@ const createdStr = computed(() => {
 const updateForm = () => {
   const attrs = props.options?.attrs;
   form.value = {
-    start: attrs?.start ?? '',
-    planDue: attrs?.planDue ?? '',
     actualDue: attrs?.actualDue ?? '',
-    priority: attrs?.priority ?? 'normal',
     notes: attrs?.notes ?? '',
+    planDue: attrs?.planDue ?? '',
+    priority: attrs?.priority ?? 'normal',
+    start: attrs?.start ?? '',
   };
 };
 
 const handleSave = () => {
   emit('save', {
-    start: form.value.start,
-    planDue: form.value.planDue,
     actualDue: form.value.actualDue,
-    priority: form.value.priority,
-    notes: form.value.notes,
     completed: form.value.actualDue !== '',
+    notes: form.value.notes,
+    planDue: form.value.planDue,
+    priority: form.value.priority,
+    start: form.value.start,
   });
   close();
 };
@@ -106,7 +108,7 @@ const updatePosition = () => {
   if (!containerRef.value || !arrowRef.value) return;
 
   // 确定参考元素：优先使用 referencePoint 创建的虚拟参考，否则使用实际 DOM 元素
-  let reference: HTMLElement | VirtualReference | null | undefined = referenceElement;
+  let reference: HTMLElement | null | undefined | VirtualReference = referenceElement;
   if (referencePoint && !virtualReference) {
     virtualReference = {
       getBoundingClientRect() {
@@ -122,14 +124,14 @@ const updatePosition = () => {
   if (!reference) return;
 
   computePosition(reference, containerRef.value, {
-    placement: props.options?.placement ?? 'top', // 基础方向，允许 flip 翻转
     middleware: [
       offset(props.options?.offset ?? 30),
       flip(),
       shift({ padding: 8 }),
       arrowMiddleware({ element: arrowRef.value, padding: 4 }),
     ],
-  }).then(({ x, y, placement: newPlacement, middlewareData }) => {
+    placement: props.options?.placement ?? 'top', // 基础方向，允许 flip 翻转
+  }).then(({ middlewareData, placement: newPlacement, x, y }) => {
     if (containerRef.value) {
       Object.assign(containerRef.value.style, {
         left: `${x}px`,
@@ -142,17 +144,17 @@ const updatePosition = () => {
     if (arrowRef.value && middlewareData.arrow) {
       const { x: arrowX, y: arrowY } = middlewareData.arrow;
       const staticSide = {
-        top: 'bottom',
-        right: 'left',
         bottom: 'top',
         left: 'right',
+        right: 'left',
+        top: 'bottom',
       }[newPlacement.split('-')[0]];
       Object.assign(arrowRef.value.style, {
-        left: arrowX !== null ? `${arrowX}px` : '',
-        top: arrowY !== null ? `${arrowY}px` : '',
-        right: '',
         bottom: '',
+        left: arrowX !== null ? `${arrowX}px` : '',
+        right: '',
         [staticSide ?? '']: '-6px',
+        top: arrowY !== null ? `${arrowY}px` : '',
       });
     }
   });
@@ -163,7 +165,7 @@ const startAutoUpdate = () => {
   if (!referenceElement && !referencePoint) return;
   if (cleanupAutoUpdate) cleanupAutoUpdate();
 
-  let reference: HTMLElement | VirtualReference | null | undefined = referenceElement;
+  let reference: HTMLElement | null | undefined | VirtualReference = referenceElement;
   if (referencePoint) {
     if (!virtualReference) {
       virtualReference = {
